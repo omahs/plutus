@@ -25,9 +25,6 @@ import Data.Type.Bool
 import Data.Type.Equality
 import GHC.TypeLits
 
--- The 'TryUnify' gadget explained in detail in
--- https://github.com/effectfully/sketches/tree/master/poly-type-of-saga/part1-try-unify
-
 -- | Check if two values of different kinds are in fact the same value (with the same kind).
 -- A heterogeneous version of @Type.Equality.(==)@.
 type (===) :: forall a b. a -> b -> Bool
@@ -35,6 +32,9 @@ type family x === y where
     x === x = 'True
     x === y = 'False
 
+-- TODO: haddock
+-- The 'TryUnify' gadget explained in detail in
+-- https://github.com/effectfully-ou/sketches/tree/cbf3ee9d11e0e3d4fc397ce7bf419418224122e2/poly-type-of-saga/part1-try-unify
 type TryUnify :: forall a b. Bool -> a -> b -> GHC.Constraint
 class same ~ (x === y) => TryUnify same x y
 instance (x === y) ~ 'False => TryUnify 'False x y
@@ -66,6 +66,8 @@ type MaybeApply :: forall k. Maybe (k -> k) -> k -> k
 type family MaybeApply mayVal x where
     MaybeApply 'Nothing  a = a
     MaybeApply ('Just f) a = f a
+
+-- TODO: https://github.com/effectfully-ou/sketches/tree/cbf3ee9d11e0e3d4fc397ce7bf419418224122e2/poly-type-of-saga/part2-enumerate-type-vars
 
 -- | Try to specialize @a@ as a type representing a PLC type variable.
 -- @i@ is a fresh id and @j@ is a final one (either @i + 1@ or @i@ depending on whether

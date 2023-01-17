@@ -234,7 +234,7 @@ comment: https://github.com/input-output-hk/plutus/issues/4306#issuecomment-1003
 In order to add a new built-in function one needs to add a constructor to 'DefaultFun' and handle
 it within the @ToBuiltinMeaning uni DefaultFun@ instance like this:
 
-    toBuiltinMeaning <Name> =
+    toBuiltinMeaning ver <Name> =
         makeBuiltinMeaning
             <denotation>
             <costingFunction>
@@ -242,6 +242,10 @@ it within the @ToBuiltinMeaning uni DefaultFun@ instance like this:
 'makeBuiltinMeaning' creates a Plutus builtin out of its denotation (i.e. Haskell implementation)
 and a costing function for it. Once a builtin is added, its Plutus type is kind-checked and printed
 to a golden file automatically (consult @git status@).
+
+See Note [Versioned builtins] for how @ver@ enables us to have different versions of the same
+builtin. For the purpose of these docs we're going to ignore versioning and use @_@ instead of
+@ver@.
 
 Below we will enumerate what kind of denotations are accepted by 'makeBuiltinMeaning' without
 touching any costing stuff.
@@ -253,7 +257,7 @@ built-in types and returns a value of a built-in type as well. For example
 
 You can feed 'encodeUtf8' directly to 'makeBuiltinMeaning' without specifying any types:
 
-    toBuiltinMeaning EncodeUtf8 =
+    toBuiltinMeaning _ EncodeUtf8 =
         makeBuiltinMeaning
             encodeUtf8
             <costingFunction>
@@ -269,14 +273,14 @@ annotation or type application or using any other way of specifying types.
 
 Here's how it looks with a type application instantiating the type variable of @(+)@:
 
-    toBuiltinMeaning AddInteger =
+    toBuiltinMeaning _ AddInteger =
         makeBuiltinMeaning
             ((+) @Integer)
             <costingFunction>
 
 Or we can specify the whole type of the denotation by type-applying 'makeBuiltinMeaning':
 
-    toBuiltinMeaning AddInteger =
+    toBuiltinMeaning _ AddInteger =
         makeBuiltinMeaning
             @(Integer -> Integer -> Integer)
             (+)
@@ -284,7 +288,7 @@ Or we can specify the whole type of the denotation by type-applying 'makeBuiltin
 
 Or we can simply annotate @(+)@ with its monomorphized type:
 
-    toBuiltinMeaning AddInteger =
+    toBuiltinMeaning _ AddInteger =
         makeBuiltinMeaning
             ((+) :: Integer -> Integer -> Integer)
             <costingFunction>
@@ -294,7 +298,7 @@ All of these are equivalent.
 It works the same way for a built-in function that has monomorphized polymorphic built-in types in
 its type signature, for example:
 
-    toBuiltinMeaning SumInteger =
+    toBuiltinMeaning _ SumInteger =
         makeBuiltinMeaning
             (sum :: [Integer] -> Integer)
             <costingFunction>
@@ -302,7 +306,7 @@ its type signature, for example:
 3. Unconstrained type variables are fine, you don't need to instantiate them (but you may want to if
 you want some builtin to be less general than what Haskell infers for its denotation). For example
 
-    toBuiltinMeaning IfThenElse =
+    toBuiltinMeaning _ IfThenElse =
         makeBuiltinMeaning
             (\b x y -> if b then x else y)
             <costingFunction>
@@ -328,7 +332,7 @@ have 'Int' as a built-in, but we have 'Integer' and we can represent the former 
 latter. The conversions between the two types are handled by 'makeBuiltinMeaning', so that the user
 doesn't need to write them themselves and can just write
 
-    toBuiltinMeaning LengthOfByteString =
+    toBuiltinMeaning _ LengthOfByteString =
         makeBuiltinMeaning
             BS.length
             <costingFunction>
@@ -371,7 +375,7 @@ something that happens commonly.
 One simple example is a monomorphic function matching on a certain constructor and failing in all
 other cases:
 
-    toBuiltinMeaning UnIData =
+    toBuiltinMeaning _ UnIData =
         makeBuiltinMeaning
             (\case
                 I i -> EvaluationSuccess i
@@ -403,7 +407,7 @@ An argument of a builtin can't have 'EvaluationResult' in its type -- only the r
 are the same as with 'EvaluationResult': 'Emitter' can't appear in the type of an argument and
 polymorphism is fine. For example:
 
-    toBuiltinMeaning Trace =
+    toBuiltinMeaning _ Trace =
         makeBuiltinMeaning
             (\text a -> a <$ emit text)
             <costingFunction>
@@ -430,7 +434,7 @@ polymorphism gets elaborated, so read Note [Elaboration of polymorphism] next.
 {- Note [Elaboration of polymorphism]
 In Note [How to add a built-in function: simple cases] we defined the following builtin:
 
-    toBuiltinMeaning IfThenElse =
+    toBuiltinMeaning _ IfThenElse =
         makeBuiltinMeaning
             (\b x y -> if b then x else y)
             <costingFunction>
@@ -499,7 +503,7 @@ to specify any types when creating built-in functions out of simple polymorphic 
 If we wanted to specify the type explicitly, we could do it like this (leaving out the @Var0@ thing
 for the elaboration machinery to figure out):
 
-    toBuiltinMeaning IfThenElse =
+    toBuiltinMeaning _ IfThenElse =
         makeBuiltinMeaning
             @(Bool -> Opaque val _ -> Opaque val _ -> Opaque val _)
             (\b x y -> if b then x else y)
@@ -514,7 +518,7 @@ Another thing we could do is define an auxiliary function with a type signature 
     ifThenElse :: Bool -> Opaque val a -> Opaque val a -> Opaque val a
     ifThenElse b x y = if b then x else y
 
-    toBuiltinMeaning IfThenElse =
+    toBuiltinMeaning _ IfThenElse =
         makeBuiltinMeaning
             ifThenElse
             <costingFunction>
@@ -539,7 +543,7 @@ which is the Plutus type of the 'IfThenElse' builtin.
 
 It's of course allowed to have multiple type variables, e.g. in the following snippet:
 
-    toBuiltinMeaning Const =
+    toBuiltinMeaning _ Const =
         makeBuiltinMeaning
             Prelude.const
             <costingFunction>
@@ -562,7 +566,7 @@ the elaboration machinery wouldn't make a fuss about that.
 
 As a final simple example, consider
 
-    toBuiltinMeaning Trace =
+    toBuiltinMeaning _ Trace =
         makeBuiltinMeaning
             (\text a -> a <$ emit text)
             <costingFunction>
@@ -579,7 +583,7 @@ Elaboration machinery is able to look under 'Emitter' and 'EvaluationResult' eve
 variable inside that does not appear anywhere else in the type signature, for example the inferred
 type of the denotation in
 
-    toBuiltinMeaning ErrorPrime =
+    toBuiltinMeaning _ ErrorPrime =
         makeBuiltinMeaning
             EvaluationFailure
             <costingFunction>
@@ -606,7 +610,7 @@ Now let's talk about more complicated built-in functions.
 @Opaque val VarN@ and we learned that this type can be used directly as opposed to being inferred.
 However there exist more ways to use 'Opaque' explicitly. Here's a simple example:
 
-    toBuiltinMeaning IdAssumeBool =
+    toBuiltinMeaning _ IdAssumeBool =
         makeBuiltinMeaning
             (Prelude.id :: Opaque val Bool -> Opaque val Bool)
             <costingFunction>
@@ -617,7 +621,7 @@ This creates a built-in function whose Plutus type is
 
 i.e. the Plutus type signature of the built-in function is the same as with
 
-    toBuiltinMeaning IdBool =
+    toBuiltinMeaning _ IdBool =
         makeBuiltinMeaning
             (Prelude.id :: Bool -> Bool)
             <costingFunction>
@@ -637,7 +641,7 @@ makes it possible to unlift @val@ as a constant or lift a constant back into @va
 reason, wanted to have 'Opaque' in the type signature of the denotation, but still unlift the
 argument as a 'Bool', we could do that:
 
-    toBuiltinMeaning IdAssumeCheckBool =
+    toBuiltinMeaning _ IdAssumeCheckBool =
         makeBuiltinMeaning
             idAssumeCheckBoolPlc
             <costingFunction>
@@ -675,7 +679,7 @@ The difference is that 'Opaque' is a wrapper around an arbitrary value and 'Some
 wrapper around a constant. 'SomeConstant' allows one to automatically unlift an argument of a
 built-in function as a constant with all 'asConstant' business kept behind the scenes, for example:
 
-    toBuiltinMeaning IdSomeConstantBool =
+    toBuiltinMeaning _ IdSomeConstantBool =
         makeBuiltinMeaning
             idSomeConstantBoolPlc
             <costingFunction>
@@ -692,7 +696,7 @@ However it's not always possible to use automatic unlifting, see next.
 
 4. If we try to define the following built-in function:
 
-    toBuiltinMeaning NullList =
+    toBuiltinMeaning _ NullList =
         makeBuiltinMeaning
             (null :: [a] -> Bool)
             <costingFunction>
@@ -704,7 +708,7 @@ general case, plus it has to be very inefficient.
 Instead we have to use 'SomeConstant' to automatically unlift the argument as a constant and then
 check that the value inside of it is a list (by matching on the type tag):
 
-    toBuiltinMeaning NullList =
+    toBuiltinMeaning _ NullList =
         makeBuiltinMeaning
             nullPlc
             <costingFunction>
@@ -724,7 +728,7 @@ in any way.
 
 Here's a similar built-in function:
 
-    toBuiltinMeaning FstPair =
+    toBuiltinMeaning _ FstPair =
         makeBuiltinMeaning
             fstPlc
             <costingFunction>
@@ -741,7 +745,7 @@ element [2] (extracted from the type tag for the whole pair constant [1]).
 Note that it's fine to mix automatic unlifting for polymorphism not related to built-in types and
 manual unlifting for arguments having non-monomorphized polymorphic built-in types, for example:
 
-    toBuiltinMeaning ChooseList =
+    toBuiltinMeaning _ ChooseList =
         makeBuiltinMeaning
             choosePlc
             <costingFunction>
@@ -760,7 +764,7 @@ machinery will do it for us.
 
 Our final example is this:
 
-    toBuiltinMeaning MkCons =
+    toBuiltinMeaning _ MkCons =
         makeBuiltinMeaning
             consPlc
             <costingFunction>
@@ -802,7 +806,7 @@ actually does. Let's look at some examples.
 
 1. The following built-in function unlifts to 'Bool' and lifts the result back:
 
-    toBuiltinMeaning IdIntegerAsBool =
+    toBuiltinMeaning _ IdIntegerAsBool =
         makeBuiltinMeaning
             idIntegerAsBool
             <costingFunction>
@@ -828,7 +832,7 @@ it's respecting its type signature is what causes a failure, not disrespecting i
 2. Another example of an unsafe built-in function is this one that checks whether an argument is a
 constant or not:
 
-    toBuiltinMeaning IsConstant =
+    toBuiltinMeaning _ IsConstant =
         makeBuiltinMeaning
             isConstantPlc
             <costingFunction>
@@ -847,7 +851,7 @@ built-in function.
 
 3. Finally, we can have a Plutus version of @unsafeCoerce@:
 
-    toBuiltinMeaning UnsafeCoerce =
+    toBuiltinMeaning _ UnsafeCoerce =
         makeBuiltinMeaning
             unsafeCoercePlc
             <costingFunction>
@@ -955,9 +959,12 @@ we don't add complex built-in types too often.
 
 It is not however clear if we can't get more performance gains by defining matchers directly as
 higher-order built-in functions compared to forbidding them. Particularly since if higher-order
-built-in functions were allowed, we could define not only matches, but also folds and keep recursion
-on the Haskell side for conversions from 'Data', which can potentially have a huge positive impact
-on performance.
+built-in functions were allowed, we could define not only matchers, but also folds and keep
+recursion on the Haskell side for conversions from 'Data', which can potentially have a huge
+positive impact on performance.
+
+See https://github.com/input-output-hk/plutus/tree/effectfully/builtins/pattern-matching-builtins
+for how higher-order builtins would look like.
 
 Read Note [Representable built-in functions over polymorphic built-in types] next.
 -}
@@ -1105,6 +1112,7 @@ instance uni ~ DefaultUni => ToBuiltinMeaning uni DefaultFun where
         let costingFun
                 :: ExMemoryUsage a => BuiltinCostModel -> a -> BS.ByteString -> ExBudgetStream
             costingFun = runCostingFunTwoArguments . paramConsByteString
+            {-# INLINE costingFun #-}
         -- See Note [Versioned builtins]
         in case ver of
             DefaultFunV1 -> makeBuiltinMeaning
@@ -1127,8 +1135,10 @@ instance uni ~ DefaultUni => ToBuiltinMeaning uni DefaultFun where
             (runCostingFunOneArgument . paramLengthOfByteString)
     toBuiltinMeaning _ver IndexByteString =
         makeBuiltinMeaning
-            (\xs n -> if n >= 0 && n < BS.length xs then EvaluationSuccess $ toInteger $ BS.index xs n else EvaluationFailure)
-            -- TODO: fix the mess above with `indexMaybe` from `ghc>=9.2,bytestring >= 0.11.0.0`.
+            -- TODO: fix this mess with @indexMaybe@ from @bytestring >= 0.11.0.0@.
+            (\xs n -> do
+                guard $ n >= 0 && n < BS.length xs
+                EvaluationSuccess $ BS.index xs n)
             (runCostingFunTwoArguments . paramIndexByteString)
     toBuiltinMeaning _ver EqualsByteString =
         makeBuiltinMeaning

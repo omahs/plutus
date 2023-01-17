@@ -18,6 +18,7 @@ import PlutusCore.Name
 
 import Universe
 
+-- TODO: comment about this not being 'HasConstantIn'
 -- | Ensures that @term@ has a 'Constant'-like constructor to lift values to and unlift values from.
 class HasConstant term where
     -- Switching from 'MonadError' to 'Either' here gave us a speedup of 2-4%.

@@ -49,7 +49,7 @@ type family FoldArgs args res where
     FoldArgs (arg ': args) res = arg -> FoldArgs args res
 
 -- | The meaning of a built-in function consists of its type represented as a 'TypeScheme',
--- its Haskell denotation and a costing function.
+-- its Haskell denotation and its uninstantiated runtime denotation.
 --
 -- The 'TypeScheme' of a built-in function is used for example for
 --
@@ -71,7 +71,7 @@ type HasMeaningIn uni val = (Typeable val, ExMemoryUsage val, HasConstantIn uni 
 
 -- | A type class for \"each function from a set of built-in functions has a 'BuiltinMeaning'\".
 class (Typeable uni, Typeable fun, Bounded fun, Enum fun, Ix fun, Default (BuiltinVersion fun)) =>
-            ToBuiltinMeaning uni fun where
+        ToBuiltinMeaning uni fun where
     -- | The @cost@ part of 'BuiltinMeaning'.
     type CostingPart uni fun
 
@@ -79,12 +79,13 @@ class (Typeable uni, Typeable fun, Bounded fun, Enum fun, Ix fun, Default (Built
     data BuiltinVersion fun
 
     -- | Get the 'BuiltinMeaning' of a built-in function.
-    toBuiltinMeaning :: HasMeaningIn uni val =>
-        BuiltinVersion fun -> fun -> BuiltinMeaning val (CostingPart uni fun)
+    toBuiltinMeaning
+        :: HasMeaningIn uni val
+        => BuiltinVersion fun -> fun -> BuiltinMeaning val (CostingPart uni fun)
 
 -- | Get the type of a built-in function.
-typeOfBuiltinFunction :: forall uni fun. ToBuiltinMeaning uni fun =>
-    BuiltinVersion fun -> fun -> Type TyName uni ()
+typeOfBuiltinFunction
+    :: forall uni fun. ToBuiltinMeaning uni fun => BuiltinVersion fun -> fun -> Type TyName uni ()
 typeOfBuiltinFunction ver fun =
     case toBuiltinMeaning @_ @_ @(Term TyName Name uni fun ()) ver fun of
         BuiltinMeaning sch _ _ -> typeSchemeToType sch
@@ -92,19 +93,19 @@ typeOfBuiltinFunction ver fun =
 {- Note [Versioned builtins]
 The purpose of the "versioned builtins" feature is to provide multiple, different denotations
 (implementations) for the same builtin(s).
-An example use of this feature is for "fixing" the behaviour of `ConsByteString` builtin to throw an
+An example use of this feature is for "fixing" the behaviour of 'ConsByteString' builtin to throw an
 error instead of overflowing its first argument.
 
 One denotation from each builtin is grouped into a 'BuiltinVersion'. Each Plutus Language version is
 linked to a specific 'BuiltinVersion' (done by plutus-ledger-api); e.g. plutus-v1 and plutus-v2 are
 linked to 'DefaultFunV1', whereas plutus-v3 changes the set of denotations to 'DefaultFunV2' (thus
- fixing 'ConsByteString').
+fixing 'ConsByteString').
 
 Each 'BuiltinVersion' (grouping) can change the denotation of one or more builtins --- or none, but
 what's the point in that.
 
-This 'BuiltinVersion' is modelled as a datatype *associated* to the `fun`. This associated datatype
-is required to provide an instance of 'Default' for quality-of-life purpose; the `def`ault builtin
+This 'BuiltinVersion' is modelled as a datatype *associated* to the @fun@. This associated datatype
+is required to provide an instance of 'Default' for quality-of-life purpose; the 'def'ault builtin
 version is expected to point to the builtin-version that the plutus-tx/plutus-ir compiler is
 currently targeting.
 
@@ -113,14 +114,14 @@ to the chain.
 
 The way that this feature is implemented buys us more than we currently need:
 - allows also a versioned change to a builtin's *type signature*, i.e. type of arguments/result as
-well as number of arguments.
+  well as number of arguments.
 - allows also a versioned change to a builtin's cost model parameters
 
-Besides having no need for this currently, it complicates the codebase since the typechecker
-now pointlessly wants to know the builtin-version before typechecking. To alleviate this,
-we use the 'Default.def' builtin version during typechecking / lifting. @effectfully:
-the solution to the problem would be to establish what kind of backwards compatibility we're willing
-to maintain and pull all of that into a separate data type and make it a part of BuiltinMeaning.
+Besides having no need for this currently, it complicates the codebase since the typechecker now
+pointlessly wants to know the builtin-version before typechecking. To alleviate this, we use the
+'Default.def' builtin version during typechecking / lifting. @effectfully: the solution to the
+problem would be to establish what kind of backwards compatibility we're willing to maintain and
+pull all of that into a separate data type and make it a part of 'BuiltinMeaning'.
 -}
 
 {- Note [Automatic derivation of type schemes]
@@ -375,8 +376,8 @@ toBuiltinRuntime cost (BuiltinMeaning _ _ denot) = denot cost
 {-# INLINE toBuiltinRuntime #-}
 
 -- See Note [Inlining meanings of builtins].
--- | Calculate runtime info for all built-in functions given denotations of builtins,
--- and a cost model.
+-- | Calculate runtime info for all built-in functions given meanings of builtins (as a constraint),
+-- the version of the set of builtins and a cost model.
 toBuiltinsRuntime
     :: (cost ~ CostingPart uni fun, ToBuiltinMeaning uni fun, HasMeaningIn uni val)
     => BuiltinVersion fun -> cost -> BuiltinsRuntime fun val
