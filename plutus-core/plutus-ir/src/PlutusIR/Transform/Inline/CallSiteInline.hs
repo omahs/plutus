@@ -3,7 +3,7 @@
 {-# LANGUAGE GADTs            #-}
 {-# LANGUAGE LambdaCase       #-}
 {-# LANGUAGE TypeFamilies     #-}
-
+{-# OPTIONS_GHC -fforce-recomp #-}
 {-|
 Call site inlining machinery. For now there's only one part: inlining of fully applied functions.
 We inline fully applied functions if the cost and size are acceptable.
@@ -170,9 +170,7 @@ considerInlineSat tm = do
             then do
                 -- rename the term before substituting in
                 renamed <- renameTerm defAsInlineTerm
-                if TypeParam `notElem` (arity varInfo)
-                then pure $ fillAppContext renamed ctx
-                else pure tm
+                pure $ fillAppContext renamed ctx
             else pure tm
           -- The variable maybe a *recursive* let binding, in which case it won't be in the map,
           -- and we don't process it. ATM recursive bindings aren't inlined.
