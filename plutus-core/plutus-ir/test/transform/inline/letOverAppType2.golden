@@ -11,10 +11,7 @@
       { idFun (con integer) }
     )
     [
-      [
-        { (abs a (type) (lam x a x)) (con integer) }
-        [ { (abs a (type) (lam x a x)) (con integer) } funApp ]
-      ]
+      [ { idFun (con integer) } [ { idFun (con integer) } funApp ] ]
       (con integer 3)
     ]
   )
