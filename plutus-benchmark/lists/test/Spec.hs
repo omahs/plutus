@@ -1,7 +1,6 @@
 {- | Tests for the sorting and summation functions.  We're benchmarking PLC
    programs which are compiled from Haskell or are hand-written, so let's make
    sure that they do what they're supposed to. -}
-{-# OPTIONS_GHC -fforce-recomp #-}
 
 module Main (main) where
 

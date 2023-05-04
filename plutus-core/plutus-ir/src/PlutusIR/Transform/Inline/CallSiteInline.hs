@@ -3,7 +3,7 @@
 {-# LANGUAGE GADTs            #-}
 {-# LANGUAGE LambdaCase       #-}
 {-# LANGUAGE TypeFamilies     #-}
-{-# OPTIONS_GHC -fforce-recomp #-}
+
 {-|
 Call site inlining machinery. For now there's only one part: inlining of fully applied functions.
 We inline fully applied functions if the cost and size are acceptable.
