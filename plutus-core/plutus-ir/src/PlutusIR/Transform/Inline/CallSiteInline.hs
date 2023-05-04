@@ -170,7 +170,10 @@ considerInlineSat tm = do
             then do
                 -- rename the term before substituting in
                 renamed <- renameTerm defAsInlineTerm
-                pure $ fillAppContext renamed ctx
+                if TypeParam `elem` (arity varInfo)
+                then pure $ fillAppContext renamed ctx
+                else pure tm
+                -- pure $ fillAppContext renamed ctx
             else pure tm
           -- The variable maybe a *recursive* let binding, in which case it won't be in the map,
           -- and we don't process it. ATM recursive bindings aren't inlined.
