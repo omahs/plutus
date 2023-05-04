@@ -56,7 +56,7 @@ coverage = testNested "Coverage"
          [ mkTests "noBool" noBool Set.empty [30]
          , mkTests "boolTrueFalse" boolTrueFalse (Set.singleton "&&") [33]
          , mkTests "boolOtherFunction" boolOtherFunction (Set.fromList ["&&", "=="]) [36, 40, 41, 42]
-         , mkTests "boolOtherFunctionSimplifiesAway" boolOtherFunctionSimplifiesAway (Set.fromList ["&&", "=="]) [48]
+         , mkTests "boolOtherFunctionSimplifiesAway" boolOtherFunctionSimplifiesAway (Set.fromList ["&&", "==", "otherFun"]) [48]
          , mkTests "boolQualifiedDisappears" boolQualifiedDisappears Set.empty [51]
          ]
  , goldenPir "coverageCode" boolOtherFunction ]

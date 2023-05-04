@@ -46,7 +46,7 @@ testClausify = testGroup "clausify"
                , testCase "formula3" $ mkClausifyTest Clausify.F3
                , testCase "formula4" $ mkClausifyTest Clausify.F4
                , testCase "formula5" $ mkClausifyTest Clausify.F5
-               , Tx.fitsInto "formula1 (size)" (Clausify.mkClausifyCode Clausify.F1) 3304
+               , Tx.fitsInto "formula1 (size)" (Clausify.mkClausifyCode Clausify.F1) 3521
                , runTestNested $
                   Tx.goldenBudget "formulaBudget" $ Clausify.mkClausifyCode Clausify.F1
                ]
@@ -95,7 +95,7 @@ testQueens = testGroup "queens"
                , runTestNested    $ Tx.goldenBudget "queens5budget" $
                   Queens.mkQueensCode 5 Queens.Bt
                ]
-             , Tx.fitsInto "Bt (size)" (Queens.mkQueensCode 5 Queens.Bt) 1943
+             , Tx.fitsInto "Bt (size)" (Queens.mkQueensCode 5 Queens.Bt) 2034
              ]
 
 ---------------- Primes ----------------

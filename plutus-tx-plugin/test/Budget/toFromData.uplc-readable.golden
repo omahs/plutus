@@ -1,154 +1,136 @@
 program 1.1.0 ((\unitval ->
-                  (\reconstructCaseError
-                    d ->
-                     (\tup ->
-                        (\index ->
-                           force ifThenElse
-                             (equalsInteger index 1)
-                             (\ds ->
-                                (\arg ->
-                                   constr 1 [ ((\tup ->
-                                                  (\index ->
-                                                     force ifThenElse
-                                                       (equalsInteger index 0)
-                                                       (\ds ->
-                                                          (\arg ->
-                                                             constr 0 [ ((\tup ->
-                                                                            (\index ->
-                                                                               force ifThenElse
-                                                                                 (equalsInteger
-                                                                                    index
-                                                                                    0)
-                                                                                 (\ds ->
-                                                                                    (\t ->
-                                                                                       (\arg ->
-                                                                                          (\t ->
-                                                                                             (\arg ->
-                                                                                                (\arg ->
-                                                                                                   constr 0 [ ((\tup ->
-                                                                                                                  (\index ->
-                                                                                                                     force ifThenElse
-                                                                                                                       (equalsInteger
-                                                                                                                          index
-                                                                                                                          1)
-                                                                                                                       (\ds ->
-                                                                                                                          constr 0 [  ])
-                                                                                                                       (\ds ->
-                                                                                                                          force ifThenElse
-                                                                                                                            (equalsInteger
-                                                                                                                               index
-                                                                                                                               0)
-                                                                                                                            (\ds ->
-                                                                                                                               constr 1 [  ])
-                                                                                                                            (\ds ->
-                                                                                                                               (\thunk ->
-                                                                                                                                  error)
-                                                                                                                                 ((\wild ->
-                                                                                                                                     unitval)
-                                                                                                                                    (force trace
-                                                                                                                                       reconstructCaseError
-                                                                                                                                       (constr 0 [  ]))))
-                                                                                                                            unitval)
-                                                                                                                       unitval)
+                  (\traceError ->
+                     (\reconstructCaseError
+                       d ->
+                        (\tup ->
+                           (\index ->
+                              force ifThenElse
+                                (equalsInteger index 1)
+                                (\ds ->
+                                   (\arg ->
+                                      constr 1 [ ((\tup ->
+                                                     (\index ->
+                                                        (\arg ->
+                                                           force ifThenElse
+                                                             (equalsInteger
+                                                                index
+                                                                0)
+                                                             (\ds ->
+                                                                constr 0 [ ((\tup ->
+                                                                               (\index ->
+                                                                                  (\t ->
+                                                                                     (\arg ->
+                                                                                        (\t ->
+                                                                                           (\arg ->
+                                                                                              (\arg ->
+                                                                                                 force ifThenElse
+                                                                                                   (equalsInteger
+                                                                                                      index
+                                                                                                      0)
+                                                                                                   (\ds ->
+                                                                                                      constr 0 [ ((\index ->
+                                                                                                                     (\fallthrough ->
+                                                                                                                        force ifThenElse
+                                                                                                                          (equalsInteger
+                                                                                                                             index
+                                                                                                                             1)
+                                                                                                                          (\ds ->
+                                                                                                                             constr 0 [  ])
+                                                                                                                          (\ds ->
+                                                                                                                             fallthrough)
+                                                                                                                          unitval)
+                                                                                                                       (force ifThenElse
+                                                                                                                          (equalsInteger
+                                                                                                                             index
+                                                                                                                             0)
+                                                                                                                          (\ds ->
+                                                                                                                             constr 1 [  ])
+                                                                                                                          (\ds ->
+                                                                                                                             traceError
+                                                                                                                               reconstructCaseError)
+                                                                                                                          unitval))
                                                                                                                     (force (force fstPair)
-                                                                                                                       tup))
-                                                                                                                 (unConstrData
-                                                                                                                    arg))
-                                                                                                            , (unIData
-                                                                                                                 arg)
-                                                                                                            , ((\tup ->
-                                                                                                                  (\index ->
-                                                                                                                     force ifThenElse
-                                                                                                                       (equalsInteger
-                                                                                                                          index
-                                                                                                                          1)
-                                                                                                                       (\ds ->
-                                                                                                                          constr 0 [  ])
-                                                                                                                       (\ds ->
-                                                                                                                          force ifThenElse
-                                                                                                                            (equalsInteger
-                                                                                                                               index
-                                                                                                                               0)
-                                                                                                                            (\ds ->
-                                                                                                                               constr 1 [  ])
-                                                                                                                            (\ds ->
-                                                                                                                               (\thunk ->
-                                                                                                                                  error)
-                                                                                                                                 ((\wild ->
-                                                                                                                                     unitval)
-                                                                                                                                    (force trace
-                                                                                                                                       reconstructCaseError
-                                                                                                                                       (constr 0 [  ]))))
-                                                                                                                            unitval)
-                                                                                                                       unitval)
+                                                                                                                       (unConstrData
+                                                                                                                          arg)))
+                                                                                                               , (unIData
+                                                                                                                    arg)
+                                                                                                               , ((\index ->
+                                                                                                                     (\fallthrough ->
+                                                                                                                        force ifThenElse
+                                                                                                                          (equalsInteger
+                                                                                                                             index
+                                                                                                                             1)
+                                                                                                                          (\ds ->
+                                                                                                                             constr 0 [  ])
+                                                                                                                          (\ds ->
+                                                                                                                             fallthrough)
+                                                                                                                          unitval)
+                                                                                                                       (force ifThenElse
+                                                                                                                          (equalsInteger
+                                                                                                                             index
+                                                                                                                             0)
+                                                                                                                          (\ds ->
+                                                                                                                             constr 1 [  ])
+                                                                                                                          (\ds ->
+                                                                                                                             traceError
+                                                                                                                               reconstructCaseError)
+                                                                                                                          unitval))
                                                                                                                     (force (force fstPair)
-                                                                                                                       tup))
-                                                                                                                 (unConstrData
-                                                                                                                    arg)) ])
-                                                                                                  (force headList
-                                                                                                     (force tailList
-                                                                                                        (force t))))
-                                                                                               (force headList
-                                                                                                  (force t)))
-                                                                                            (delay (force tailList
-                                                                                                      (force t))))
-                                                                                         (force headList
-                                                                                            (force t)))
-                                                                                      (delay (force (force sndPair)
-                                                                                                tup)))
-                                                                                 (\ds ->
-                                                                                    (\thunk ->
-                                                                                       error)
-                                                                                      ((\wild ->
-                                                                                          unitval)
-                                                                                         (force trace
-                                                                                            reconstructCaseError
-                                                                                            (constr 0 [  ]))))
-                                                                                 unitval)
-                                                                              (force (force fstPair)
-                                                                                 tup))
-                                                                           (unConstrData
-                                                                              arg)) ])
-                                                            (force headList
-                                                               (force (force sndPair)
-                                                                  tup)))
-                                                       (\ds ->
-                                                          force ifThenElse
-                                                            (equalsInteger
-                                                               index
-                                                               1)
-                                                            (\ds -> constr 1 [])
-                                                            (\ds ->
-                                                               (\thunk ->
-                                                                  error)
-                                                                 ((\wild ->
-                                                                     unitval)
-                                                                    (force trace
-                                                                       reconstructCaseError
-                                                                       (constr 0 [  ]))))
-                                                            unitval)
-                                                       unitval)
-                                                    (force (force fstPair) tup))
-                                                 (unConstrData arg)) ])
-                                  (force headList (force (force sndPair) tup)))
-                             (\ds ->
-                                force ifThenElse
-                                  (equalsInteger index 0)
-                                  (\ds ->
-                                     (\arg -> constr 0 [(unIData arg)])
-                                       (force headList
-                                          (force (force sndPair) tup)))
-                                  (\ds ->
-                                     (\thunk -> error)
-                                       ((\wild -> unitval)
-                                          (force trace
-                                             reconstructCaseError
-                                             (constr 0 []))))
-                                  unitval)
-                             unitval)
-                          (force (force fstPair) tup))
-                       (unConstrData d))
-                    "PT1"
+                                                                                                                       (unConstrData
+                                                                                                                          arg))) ])
+                                                                                                   (\ds ->
+                                                                                                      traceError
+                                                                                                        reconstructCaseError)
+                                                                                                   unitval)
+                                                                                                (force headList
+                                                                                                   (force tailList
+                                                                                                      t)))
+                                                                                             (force headList
+                                                                                                t))
+                                                                                          (force tailList
+                                                                                             t))
+                                                                                       (force headList
+                                                                                          t))
+                                                                                    (force (force sndPair)
+                                                                                       tup))
+                                                                                 (force (force fstPair)
+                                                                                    tup))
+                                                                              (unConstrData
+                                                                                 arg)) ])
+                                                             (\ds ->
+                                                                force ifThenElse
+                                                                  (equalsInteger
+                                                                     index
+                                                                     1)
+                                                                  (\ds ->
+                                                                     constr 1 [  ])
+                                                                  (\ds ->
+                                                                     traceError
+                                                                       reconstructCaseError)
+                                                                  unitval)
+                                                             unitval)
+                                                          (force headList
+                                                             (force (force sndPair)
+                                                                tup)))
+                                                       (force (force fstPair)
+                                                          tup))
+                                                    (unConstrData arg)) ])
+                                     (force headList
+                                        (force (force sndPair) tup)))
+                                (\ds ->
+                                   force ifThenElse
+                                     (equalsInteger index 0)
+                                     (\ds ->
+                                        (\arg -> constr 0 [(unIData arg)])
+                                          (force headList
+                                             (force (force sndPair) tup)))
+                                     (\ds -> traceError reconstructCaseError)
+                                     unitval)
+                                unitval)
+                             (force (force fstPair) tup))
+                          (unConstrData d))
+                       "PT1")
+                    (\str -> (\x -> error) (force trace str (constr 0 [])))
                     (constrData
                        1
                        (force mkCons
