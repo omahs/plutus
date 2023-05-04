@@ -31,7 +31,7 @@ letrec
           {all dead. dead}
 in
 let
-  !eta : List Bool
+  !ls : List Bool
     = (let
           a = List Bool
         in
@@ -51,4 +51,4 @@ let
         (\(ds : Bool) (ds : List Bool) -> Cons {Bool} ds ds)
         (Nil {Bool})
 in
-go eta
+go ls

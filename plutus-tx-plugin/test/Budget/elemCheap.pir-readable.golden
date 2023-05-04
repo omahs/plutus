@@ -23,7 +23,10 @@ letrec
                  !acc : Bool = go xs
                in
                Bool_match
-                 (ifThenElse {Bool} (equalsInteger 1 x) True False)
+                 (let
+                   !b : bool = equalsInteger 1 x
+                 in
+                 ifThenElse {Bool} b True False)
                  {all dead. Bool}
                  (/\dead -> True)
                  (/\dead -> acc)
@@ -31,7 +34,7 @@ letrec
           {all dead. dead}
 in
 let
-  !eta : List integer
+  !ls : List integer
     = (let
           a = List integer
         in
@@ -41,4 +44,4 @@ let
         (\(ds : integer) (ds : List integer) -> Cons {integer} ds ds)
         (Nil {integer})
 in
-go eta
+go ls

@@ -10,6 +10,15 @@ let
   data Bool | Bool_match where
     True : Bool
     False : Bool
+  !ls : List integer
+    = (let
+          a = List integer
+        in
+        \(c : integer -> a -> a)
+         (n : a) ->
+          c 1 (c 2 (c 3 (c 4 (c 5 (c 6 (c 7 (c 8 (c 9 (c 10 n))))))))))
+        (\(ds : integer) (ds : List integer) -> Cons {integer} ds ds)
+        (Nil {integer})
 in
 (let
     b = Maybe integer
@@ -37,11 +46,4 @@ in
        (/\dead -> acc)
        {all dead. dead})
   (Nothing {integer})
-  ((let
-       a = List integer
-     in
-     \(c : integer -> a -> a)
-      (n : a) ->
-       c 1 (c 2 (c 3 (c 4 (c 5 (c 6 (c 7 (c 8 (c 9 (c 10 n))))))))))
-     (\(ds : integer) (ds : List integer) -> Cons {integer} ds ds)
-     (Nil {integer}))
+  ls
