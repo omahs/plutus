@@ -9,6 +9,7 @@
 
 module PlutusIR.Transform.Inline.Utils where
 
+import PlutusCore.Annotation
 import PlutusCore.Builtin qualified as PLC
 import PlutusCore.Name
 import PlutusCore.Quote
@@ -20,8 +21,7 @@ import PlutusIR.Analysis.Usages qualified as Usages
 import PlutusIR.Purity (firstEffectfulTerm, isPure)
 import PlutusIR.Transform.Rename ()
 import PlutusPrelude
-
-import PlutusCore.Annotation
+import Universe
 
 import Control.Lens hiding (Strict)
 import Control.Monad.Reader
@@ -37,6 +37,7 @@ type ExternalConstraints tyname name uni fun m =
     ( HasUnique name TermUnique
     , HasUnique tyname TypeUnique
     , Eq name
+    , Eq tyname
     , PLC.ToBuiltinMeaning uni fun
     , MonadQuote m
     )
@@ -45,6 +46,7 @@ type InliningConstraints tyname name uni fun =
     ( HasUnique name TermUnique
     , HasUnique tyname TypeUnique
     , Eq name
+    , Eq tyname
     , PLC.ToBuiltinMeaning uni fun
     )
 
@@ -109,25 +111,26 @@ an under-approximation of how many arguments the term may need.
 e.g. consider the term @let id = \x -> x in id@: the variable @id@ has syntactic
 arity @[]@, but does in fact need an argument before it does any work.
 -}
-type Arity = [ParamKind]
+type Arity tyname name uni ann = [ParamKind tyname name uni ann]
 
 -- | Info attached to a let-binding needed for call site inlining.
-data VarInfo tyname name uni fun ann =
-  MkVarInfo {
-    varStrictness :: Strictness
-    ,varDef       :: InlineTerm tyname name uni fun ann
+data VarInfo tyname name uni fun ann = MkVarInfo
+    { varStrictness :: Strictness
+    , varDef        :: Term tyname name uni fun ann
     -- ^ its definition that has been unconditionally inlined.
-    , arity       :: Arity -- ^ its arity, storing to avoid repeated calculations.
-    , varBody     :: Term tyname name uni fun ann
+    , varArity      :: Arity tyname name uni ann
+    -- ^ its arity, storing to avoid repeated calculations.
+    , varBody       :: Term tyname name uni fun ann
     -- ^ the body of the function, for checking `acceptable` or not. Storing this to avoid repeated
     -- calculations.
-  }
+    }
 -- | Is the next argument a term or a type?
-data ParamKind =
-    TermParam | TypeParam
-    deriving stock (Eq, Show)
+data ParamKind tyname name uni ann =
+    TermParam ann name (Type tyname uni ann) | TypeParam ann tyname (Kind ann)
+    deriving stock (Show)
 
-instance Pretty ParamKind where
+instance (Show tyname, Show name, Show ann, GShow uni) =>
+    Pretty (ParamKind tyname name uni ann) where
   pretty = viaShow
 
 -- | Inliner context for both unconditional inlining and call site inlining.

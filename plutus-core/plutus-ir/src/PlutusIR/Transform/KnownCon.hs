@@ -82,7 +82,7 @@ go ctxt t
       -- (which should always be the case in programs that come from Plutus Tx,
       -- but not necessarily in arbitrary PIR programs).
       lengthContext branchArgs == length cons =
-        fillAppContext
+        mkApps
             branch
             -- The arguments to the selected branch consists of the arguments
             -- to the constructor, without the leading type arguments - e.g.,

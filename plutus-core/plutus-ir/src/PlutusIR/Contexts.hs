@@ -6,6 +6,7 @@
 module PlutusIR.Contexts where
 
 import PlutusIR.Core
+import PlutusIR.Transform.Inline.Utils
 
 -- | A context for an iterated term/type application, with the hole at the head of the
 -- application.
@@ -34,14 +35,23 @@ splitApplication tm
     go t ctx                    = (t, ctx)
 
 -- | Fills in the hole in an 'AppContext', the inverse of 'splitApplication'.
-fillAppContext
-  :: Term tyname name uni fun ann
-  -> AppContext tyname name uni fun ann
-  -> Term tyname name uni fun ann
-fillAppContext t = \case
+mkApps ::
+  Term tyname name uni fun ann ->
+  AppContext tyname name uni fun ann ->
+  Term tyname name uni fun ann
+mkApps t = \case
   AppContextEnd                -> t
-  TermAppContext arg ann ctx   -> fillAppContext (Apply ann t arg) ctx
-  TypeAppContext tyArg ann ctx -> fillAppContext (TyInst ann t tyArg) ctx
+  TermAppContext arg ann ctx   -> mkApps (Apply ann t arg) ctx
+  TypeAppContext tyArg ann ctx -> mkApps (TyInst ann t tyArg) ctx
+
+mkLams ::
+  Term tyname name uni fun ann ->
+  Arity tyname name uni ann ->
+  Term tyname name uni fun ann
+mkLams t = \case
+  []                      -> t
+  TermParam ann n ty : xs -> LamAbs ann n ty (mkLams t xs)
+  TypeParam ann n k : xs  -> TyAbs ann n k (mkLams t xs)
 
 dropAppContext :: Int -> AppContext tyname name uni fun a -> AppContext tyname name uni fun a
 dropAppContext i ctx | i <= 0 = ctx

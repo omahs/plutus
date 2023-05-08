@@ -12,11 +12,15 @@ See note [Inlining of fully applied functions].
 
 module PlutusIR.Transform.Inline.CallSiteInline where
 
-import Control.Monad.State
-import PlutusCore.Rename.Internal
+import PlutusIR.Analysis.Size
 import PlutusIR.Contexts
 import PlutusIR.Core
 import PlutusIR.Transform.Inline.Utils
+import PlutusIR.Transform.Substitute
+
+import Control.Monad.Extra
+import Control.Monad.State
+
 {- Note [Inlining of fully applied functions]
 
 We inline if (1) a function is fully applied (2) its cost and size are acceptable. We discuss
@@ -110,70 +114,88 @@ improve the optimization.
 -- it's `Utils.acceptable`.
 computeArity ::
     Term tyname name uni fun ann
-    -> (Arity, Term tyname name uni fun ann)
+    -> (Arity tyname name uni ann, Term tyname name uni fun ann)
 computeArity = \case
-    LamAbs _ _ _ body ->
-      let (nextArgs, nextBody) = computeArity body in (TermParam:nextArgs, nextBody)
-    TyAbs _ _ _ body  ->
-      let (nextArgs, nextBody) = computeArity body in (TypeParam:nextArgs, nextBody)
+    LamAbs ann n ty body ->
+      let (nextArgs, nextBody) = computeArity body in (TermParam ann n ty : nextArgs, nextBody)
+    TyAbs ann n k body  ->
+      let (nextArgs, nextBody) = computeArity body in (TypeParam ann n k : nextArgs, nextBody)
     -- Whenever we encounter a body that is not a lambda or type abstraction, we are done counting
     tm                -> ([],tm)
 
--- | Given the arity of a function, and the list of arguments applied to it, return whether it is
--- fully applied or not.
-isFullyApplied :: Arity -> AppContext tyname name uni fun ann -> Bool
-isFullyApplied [] _ = True -- The function needs no more arguments
-isFullyApplied (_lam:_lams) AppContextEnd = False -- under-application
-isFullyApplied (TermParam:tlLams) (TermAppContext _ _ ctx) = isFullyApplied tlLams ctx
-isFullyApplied (TypeParam:tlLams) (TypeAppContext _ _ ctx) = isFullyApplied tlLams ctx
-isFullyApplied _ _ =
-    -- wrong argument type, i.e., we have an ill-typed term here. It's not what we define as fully
-    -- applied. Although if the term was ill-typed before, it will be ill-typed after the
-    -- inlining, and it won't make it any worse, so we could consider accepting this.
-    False
+-- | Apply the RHS of the given variable to the given arguments, and beta-reduce
+-- the application, if possible.
+applyAndBetaReduce ::
+  forall tyname name uni fun ann.
+  (InliningConstraints tyname name uni fun) =>
+  -- | The variable
+  VarInfo tyname name uni fun ann ->
+  -- | The arguments
+  AppContext tyname name uni fun ann ->
+  InlineM tyname name uni fun ann (Maybe (Term tyname name uni fun ann))
+applyAndBetaReduce info = go (varBody info) (varArity info)
+  where
+    go ::
+      Term tyname name uni fun ann ->
+      Arity tyname name uni ann ->
+      AppContext tyname name uni fun ann ->
+      InlineM tyname name uni fun ann (Maybe (Term tyname name uni fun ann))
+    go acc arity args = case (arity, args) of
+      -- fully applied
+      ([], _) -> pure . Just $ mkApps acc args
+      -- partially applied
+      (_, AppContextEnd) -> pure . Just $ mkLams acc arity
+      (TermParam _ param _ : arity', TermAppContext arg _ args') ->
+        ifM
+          (safeToSubst param arg)
+          ( go
+              (termSubstNames (\n -> if n == param then Just arg else Nothing) acc)
+              arity'
+              args'
+          )
+          (pure Nothing)
+      (TypeParam _ param _ : arity', TypeAppContext arg _ args') ->
+        go
+          (termSubstTyNames (\n -> if n == param then Just arg else Nothing) acc)
+          arity'
+          args'
+      _ -> pure Nothing
 
--- | Consider whether to inline a saturated application.
-considerInlineSat :: forall tyname name uni fun ann. InliningConstraints tyname name uni fun
-    => Term tyname name uni fun ann -- ^ The `body` of the `Let` term.
-    -> InlineM tyname name uni fun ann (Term tyname name uni fun ann)
-considerInlineSat tm = do
-    -- collect all the arguments of the term being applied to
-    case splitApplication tm of
-      -- if it is a `Var` that is being applied to, check to see if it's fully applied
-      (Var _ann name, ctx) -> do
-        maybeVarInfo <- gets (lookupVarInfo name)
-        case maybeVarInfo of
-          Just varInfo -> do
-            let body = varBody varInfo
-                defAsInlineTerm = varDef varInfo
-                inlineTermToTerm :: InlineTerm tyname name uni fun ann
-                  -> Term tyname name uni fun ann
-                inlineTermToTerm (Done (Dupable var)) = var
-                def = inlineTermToTerm defAsInlineTerm
-                fullyApplied = isFullyApplied (arity varInfo) ctx
-                -- It is the body that we will be left with in the program after we have
-                -- reduced the saturated application, so the size increase we will be left
-                -- with comes from the body, and that is what we need to check is okay
-                bodySizeOk = sizeIsAcceptable body
+    -- Checks whether it is safe (i.e., preserves semantics) to perform beta reduction,
+    -- namely, turning `(\a -> body) arg` into `body [a := arg]`.
+    safeToSubst :: name -> Term tyname name uni fun ann -> InlineM tyname name uni fun ann Bool
+    safeToSubst n = effectSafe (varBody info) Strict n <=< checkPurity
+
+-- | Consider whether to inline an application.
+inlineApp ::
+  forall tyname name uni fun ann.
+  (InliningConstraints tyname name uni fun) =>
+  -- | The `body` of the `Let` term.
+  Term tyname name uni fun ann ->
+  InlineM tyname name uni fun ann (Term tyname name uni fun ann)
+inlineApp t
+  | (Var _ann name, args) <- splitApplication t =
+      gets (lookupVarInfo name) >>= \case
+        Just varInfo -> applyAndBetaReduce varInfo args >>= \case
+          Just reduced -> do
+            let def = varDef varInfo
+                sizeIsOk = termSize reduced <= termSize t
                 -- The definition itself will be inlined, so we need to check that the cost
                 -- of that is acceptable. Note that we do _not_ check the cost of the _body_.
                 -- We would have paid that regardless.
-                -- Consider e.g. `let y = \x. f x`. We pay the cost of the `f x` at every call
-                -- site regardless. The work that is being duplicated is the work for the lambda.
+                -- Consider e.g. `let y = \x. f x`. We pay the cost of the `f x` at
+                -- every call site regardless. The work that is being duplicated is
+                -- the work for the lambda.
                 defCostOk = costIsAcceptable def
             -- check if binding is pure to avoid duplicated effects.
-            -- For strict bindings we can't accidentally make any effects happen less often than
-            -- it would have before, but we can make it happen more often.
+            -- For strict bindings we can't accidentally make any effects happen less often
+            -- than it would have before, but we can make it happen more often.
             -- We could potentially do this safely in non-conservative mode.
             defPure <- isTermBindingPure (varStrictness varInfo) def
-            if fullyApplied && bodySizeOk && defCostOk && defPure
-            then do
-                -- rename the term before substituting in
-                renamed <- renameTerm defAsInlineTerm
-                pure $ fillAppContext renamed ctx
-            else pure tm
-          -- The variable maybe a *recursive* let binding, in which case it won't be in the map,
-          -- and we don't process it. ATM recursive bindings aren't inlined.
-          Nothing -> pure tm
-      -- if the term being applied is not a `Var`, don't inline
-      _ -> pure tm
+            pure $ if sizeIsOk && defCostOk && defPure then reduced else t
+          Nothing -> pure t
+        -- The variable maybe a *recursive* let binding, in which case it won't be in the map,
+        -- and we don't process it. ATM recursive bindings aren't inlined.
+        Nothing -> pure t
+  -- if the term being applied is not a `Var`, don't inline
+  | otherwise = pure t
