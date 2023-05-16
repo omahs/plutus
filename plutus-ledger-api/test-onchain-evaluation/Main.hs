@@ -24,6 +24,10 @@ import System.FilePath (isExtensionOf, takeBaseName)
 import Test.Tasty
 import Test.Tasty.HUnit
 
+import System.CPUTime
+import Debug.Trace
+import Prettyprinter
+
 -- | Test cases from a single event dump file
 testOneFile :: FilePath -> TestTree
 testOneFile eventFile = testCase (takeBaseName eventFile) $ do
@@ -36,12 +40,22 @@ testOneFile eventFile = testCase (takeBaseName eventFile) $ do
             errs <-
                 fmap catMaybes $
                     mapM
-                        (evaluate . runSingleEvent ctxV1 ctxV2)
+                        (measure (runSingleEvent ctxV1 ctxV2))
                         (toList (eventsEvents events))
             whenJust (nonEmpty errs) $ assertFailure . renderTestFailures
         (Left err, _) -> assertFailure $ display err
         (_, Left err) -> assertFailure $ display err
   where
+    measure act event = do
+        t1 <- getCPUTime
+        res <- evaluate $ act event
+        t2 <- getCPUTime
+        let tdiffSecs = fromInteger (t2-t1) / 1e12
+        when (tdiffSecs > 0.5) $
+            -- show only larger than 0.5secs
+            traceIO  $ show $ pretty (t2 - t1) <+> pretty event
+        pure res
+
     mkContext f = \case
         Nothing         -> Right Nothing
         Just costParams -> Just . (,costParams) . fst <$> runWriterT (f costParams)

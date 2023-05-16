@@ -170,5 +170,6 @@ executable evaluation-test
     , serialise
     , tasty
     , tasty-hunit
+    , prettyprinter
 
   default-language: Haskell2010
