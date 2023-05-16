@@ -1,6 +1,5 @@
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE QuasiQuotes       #-}
 {-# LANGUAGE TupleSections     #-}
 {-# LANGUAGE TypeApplications  #-}
 
@@ -13,7 +12,6 @@ import PlutusLedgerApi.V1 qualified as V1
 import PlutusLedgerApi.V2 qualified as V2
 
 import Codec.Serialise qualified as CBOR
-import Control.Concurrent.Async (mapConcurrently)
 import Control.Exception (evaluate)
 import Control.Monad.Extra (whenJust)
 import Data.List.NonEmpty (nonEmpty, toList)
@@ -37,7 +35,7 @@ testOneFile eventFile = testCase (takeBaseName eventFile) $ do
         (Right ctxV1, Right ctxV2) -> do
             errs <-
                 fmap catMaybes $
-                    mapConcurrently
+                    mapM
                         (evaluate . runSingleEvent ctxV1 ctxV2)
                         (toList (eventsEvents events))
             whenJust (nonEmpty errs) $ assertFailure . renderTestFailures
