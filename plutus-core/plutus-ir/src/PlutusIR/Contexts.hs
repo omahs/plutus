@@ -5,58 +5,27 @@
 -- with the context as a reified datatype that can be inspected and modified.
 module PlutusIR.Contexts where
 
+import PlutusCore.MkPlc
 import PlutusIR.Core
 
--- | A context for an iterated term/type application, with the hole at the head of the
--- application.
-data AppContext tyname name uni fun ann =
-  TermAppContext (Term tyname name uni fun ann) ann (AppContext tyname name uni fun ann)
-  | TypeAppContext (Type tyname uni ann) ann (AppContext tyname name uni fun ann)
-  | AppContextEnd
-
-{- | Takes a term and views it as a head plus an 'AppContext', e.g.
+{- | Takes a term and views it as a head plus a list of arguments, e.g.
 
 @
     [{ f t } u v]
     -->
     (f, [{ _ t } u v])
     ==
-    f (TypeAppContext t (TermAppContext u (TermAppContext v AppContextEnd)))
+    f [TypeArg t, TermArg u, TermArg v]
 @
 -}
 splitApplication :: Term tyname name uni fun ann
-  -> (Term tyname name uni fun ann, AppContext tyname name uni fun ann)
+  -> (Term tyname name uni fun ann, [Arg Term tyname name uni fun ann])
 splitApplication tm
-  = go tm AppContextEnd
+  = go tm []
   where
-    go (Apply ann f arg) ctx    = go f (TermAppContext arg ann ctx)
-    go (TyInst ann f tyArg) ctx = go f (TypeAppContext tyArg ann ctx)
-    go t ctx                    = (t, ctx)
-
--- | Fills in the hole in an 'AppContext', the inverse of 'splitApplication'.
-fillAppContext
-  :: Term tyname name uni fun ann
-  -> AppContext tyname name uni fun ann
-  -> Term tyname name uni fun ann
-fillAppContext t = \case
-  AppContextEnd                -> t
-  TermAppContext arg ann ctx   -> fillAppContext (Apply ann t arg) ctx
-  TypeAppContext tyArg ann ctx -> fillAppContext (TyInst ann t tyArg) ctx
-
-dropAppContext :: Int -> AppContext tyname name uni fun a -> AppContext tyname name uni fun a
-dropAppContext i ctx | i <= 0 = ctx
-dropAppContext i ctx = case ctx of
-  AppContextEnd           -> ctx
-  TermAppContext _ _ ctx' -> dropAppContext (i-1) ctx'
-  TypeAppContext _ _ ctx' -> dropAppContext (i-1) ctx'
-
-lengthContext :: AppContext tyname name uni fun a -> Int
-lengthContext = go 0
-  where
-    go acc = \case
-      AppContextEnd          -> acc
-      TermAppContext _ _ ctx -> go (acc+1) ctx
-      TypeAppContext _ _ ctx -> go (acc+1) ctx
+    go (Apply ann f arg) args    = go f (TermArg ann arg : args)
+    go (TyInst ann f tyArg) args = go f (TypeArg ann tyArg : args)
+    go t ctx                     = (t, ctx)
 
 {- Note [Context splitting in a recursive pass]
 When writing a recursive pass that processes the whole program, you must be

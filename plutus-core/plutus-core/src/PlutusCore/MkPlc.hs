@@ -13,6 +13,7 @@
 
 module PlutusCore.MkPlc
     ( TermLike (..)
+    , Arg (..)
     , UniOf
     , mkTyBuiltinOf
     , mkTyBuiltin
@@ -40,6 +41,7 @@ module PlutusCore.MkPlc
     , mkIterTyLam
     , mkIterApp
     , mkIterAppNoAnn
+    , applyArgs
     , mkIterTyFun
     , mkIterLamAbs
     , mkIterInst
@@ -152,7 +154,9 @@ type TermDef term tyname name uni ann = Def (VarDecl tyname name uni ann) (term 
 -- | A type definition as a type variable.
 type TypeDef tyname uni ann = Def (TyVarDecl tyname ann) (Type tyname uni ann)
 
-data Arg term tyname uni ann = TermArg (term ann) | TypeArg (Type tyname uni ann)
+data Arg term tyname name uni fun ann
+    = TermArg ann (term tyname name uni fun ann)
+    | TypeArg ann (Type tyname uni ann)
 
 -- | The type of a PLC function.
 data FunctionType tyname uni ann = FunctionType
@@ -248,6 +252,15 @@ mkIterInstNoAnn
     -> [Type tyname uni ()] -- ^ @ [ x0 ... xn ] @
     -> term () -- ^ @{ a x0 ... xn }@
 mkIterInstNoAnn term = mkIterInst term . fmap ((),)
+
+applyArgs
+    :: TermLike (term tyname name uni fun) tyname name uni fun
+    => term tyname name uni fun ann
+    -> [Arg term tyname name uni fun ann]
+    -> term tyname name uni fun ann
+applyArgs = foldl' $ \acc -> \case
+    TermArg ann t -> apply ann acc t
+    TypeArg ann t -> tyInst ann acc t
 
 -- | Lambda abstract a list of names.
 mkIterLamAbs

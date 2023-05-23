@@ -10,6 +10,7 @@ module PlutusIR.Transform.EvaluateBuiltins
     ) where
 
 import PlutusCore.Builtin
+import PlutusCore.MkPlc
 import PlutusIR.Contexts
 import PlutusIR.Core
 
@@ -32,9 +33,9 @@ evaluateBuiltins conservative ver costModel = transformOf termSubterms processTe
     -- Nothing means "leave the original term as it was"
     eval
       :: BuiltinRuntime (Term tyname name uni fun ())
-      -> AppContext tyname name uni fun a
+      -> [Arg Term tyname name uni fun a]
       -> Maybe (Term tyname name uni fun ())
-    eval (BuiltinResult _ getX) AppContextEnd =
+    eval (BuiltinResult _ getX) [] =
         case getX of
             MakeKnownSuccess v           -> Just v
             -- Evaluates successfully, but does logging. If we're being conservative
@@ -48,20 +49,20 @@ evaluateBuiltins conservative ver costModel = transformOf termSubterms processTe
             -- distinguish these, we have to assume it's the latter case and just leave
             -- things alone.
             MakeKnownFailure{}           -> Nothing
-    eval (BuiltinExpectArgument toRuntime) (TermAppContext arg _ ctx) =
+    eval (BuiltinExpectArgument toRuntime) (TermArg _ arg : args) =
         -- Builtin evaluation does not work with annotations, so we have to throw
         -- the argument annotation away here
-        eval (toRuntime $ void arg) ctx
-    eval (BuiltinExpectForce runtime) (TypeAppContext _ _ ctx) =
-        eval runtime ctx
+        eval (toRuntime $ void arg) args
+    eval (BuiltinExpectForce runtime) (TypeArg _ _ : args) =
+        eval runtime args
     -- arg mismatch, including under-application, just leave it alone
     eval _ _ = Nothing
 
     processTerm :: Term tyname name uni fun a -> Term tyname name uni fun a
-    -- See Note [Context splitting in a recursive pass]
-    processTerm t@(splitApplication -> (Builtin x bn, argCtx)) =
+    -- See Note [Application splitting in a recursive pass]
+    processTerm t@(splitApplication -> (Builtin x bn, args)) =
       let runtime = toBuiltinRuntime costModel (toBuiltinMeaning ver bn)
-      in case eval runtime argCtx of
+      in case eval runtime args of
            -- Builtin evaluation gives us a fresh term with no annotation.
            -- Use the annotation of the builtin node, arbitrarily. This is slightly
            -- suboptimal, e.g. in `ifThenElse True x y`, we will get back `x`, but
