@@ -92,7 +92,7 @@ runTestDataWith :: forall (a :: Type) (msg :: Type) .
   PropertyT IO ()
 runTestDataWith ver testData f op = do
   let (vk, msg, sig) = getCaseData f testData
-  let actualExp = mkIterApp () (builtin () op) [
+  let actualExp = mkIterAppNoAnn (builtin () op) [
         mkConstant @ByteString () vk,
         mkConstant @ByteString () msg,
         mkConstant @ByteString () sig
@@ -447,5 +447,3 @@ genSignKey :: forall (a :: Type) . (DSIGNAlgorithm a) => Gen (SignKeyDSIGN a)
 genSignKey = do
   seed <- mkSeedFromBytes <$> (Gen.bytes . Range.linear 64 $ 128)
   pure . genKeyDSIGN $ seed
-
-

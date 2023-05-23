@@ -26,7 +26,7 @@ schnorrVerifyRegressions =
     testCase "malformed verkey should fail" $ do
       let badVerKey = "m"
       let message = "\213"
-      let comp = mkIterApp () (builtin () VerifySchnorrSecp256k1Signature) [
+      let comp = mkIterAppNoAnn (builtin () VerifySchnorrSecp256k1Signature) [
             mkConstant @ByteString () badVerKey,
             mkConstant @ByteString () message,
             mkConstant @ByteString () signature
