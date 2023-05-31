@@ -59,6 +59,9 @@ import PlutusCore.Evaluation.Machine.ExMemoryUsage
 import PlutusCore.Name
 import PlutusCore.Version as Export
 
+import GHC.Generics
+import Generics.Deriving.FZip
+
 import Control.Lens
 import Data.Hashable
 import Data.Kind qualified as GHC
@@ -70,8 +73,8 @@ import Universe
 data Kind ann
     = Type ann
     | KindArrow ann (Kind ann) (Kind ann)
-    deriving stock (Eq, Show, Functor, Generic, Lift)
-    deriving anyclass (NFData, Hashable)
+    deriving stock (Eq, Show, Functor, Generic, Generic1, Lift)
+    deriving anyclass (NFData, Hashable, FZip)
 
 -- | The kind of a pattern functor (the first 'Type' argument of 'TyIFix') at a given kind (of the
 -- second 'Type' argument of 'TyIFix'):
@@ -102,8 +105,8 @@ data Type tyname uni ann
     | TyLam ann tyname (Kind ann) (Type tyname uni ann) -- ^ Type lambda
     | TyApp ann (Type tyname uni ann) (Type tyname uni ann) -- ^ Type application
     | TySOP ann [[Type tyname uni ann]] -- ^ Sum-of-products type
-    deriving stock (Show, Functor, Generic)
-    deriving anyclass (NFData)
+    deriving stock (Show, Functor, Generic, Generic1)
+    deriving anyclass (NFData, FZip)
 
 data Term tyname name uni fun ann
     = Var ann name -- ^ a named variable
@@ -119,7 +122,8 @@ data Term tyname name uni fun ann
     | Constant ann (Some (ValueOf uni)) -- ^ constants
     | Builtin ann fun -- ^ builtin functions
     | Error ann (Type tyname uni ann) -- ^ fail with error
-    deriving stock (Functor, Generic)
+    deriving stock (Functor, Generic, Generic1)
+    deriving anyclass (FZip)
 
 deriving stock instance (Show tyname, Show name, GShow uni, Everywhere uni Show, Show fun, Show ann, Closed uni)
     => Show (Term tyname name uni fun ann)
@@ -161,7 +165,9 @@ data TyVarDecl tyname ann = TyVarDecl
     { _tyVarDeclAnn  :: ann
     , _tyVarDeclName :: tyname
     , _tyVarDeclKind :: Kind ann
-    } deriving stock (Functor, Show, Generic)
+    }
+    deriving stock (Functor, Show, Generic, Generic1)
+    deriving anyclass (FZip)
 makeLenses ''TyVarDecl
 
 -- | A "variable declaration", i.e. a name and a type for a variable.
@@ -169,7 +175,9 @@ data VarDecl tyname name uni ann = VarDecl
     { _varDeclAnn  :: ann
     , _varDeclName :: name
     , _varDeclType :: Type tyname uni ann
-    } deriving stock (Functor, Show, Generic)
+    }
+    deriving stock (Functor, Show, Generic, Generic1)
+    deriving anyclass (FZip)
 makeLenses ''VarDecl
 
 -- | A "type declaration", i.e. a kind for a type.
@@ -177,7 +185,9 @@ data TyDecl tyname uni ann = TyDecl
     { _tyDeclAnn  :: ann
     , _tyDeclType :: Type tyname uni ann
     , _tyDeclKind :: Kind ann
-    } deriving stock (Functor, Show, Generic)
+    }
+    deriving stock (Functor, Show, Generic, Generic1)
+    deriving anyclass (FZip)
 makeLenses ''TyDecl
 
 tyDeclVar :: TyVarDecl tyname ann -> TyDecl tyname uni ann

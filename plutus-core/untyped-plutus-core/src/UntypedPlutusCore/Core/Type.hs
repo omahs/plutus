@@ -28,6 +28,8 @@ module UntypedPlutusCore.Core.Type
 import Control.Lens
 import PlutusPrelude
 
+import GHC.Generics
+import Generics.Deriving.FZip
 import Data.Word
 import PlutusCore.Builtin qualified as TPLC
 import PlutusCore.Core qualified as TPLC
@@ -86,7 +88,8 @@ data Term name uni fun ann
     -- See Note [Constr tag type]
     | Constr !ann !Word64 ![Term name uni fun ann]
     | Case !ann !(Term name uni fun ann) ![Term name uni fun ann]
-    deriving stock (Functor, Generic)
+    deriving stock (Functor, Generic, Generic1)
+    deriving anyclass (FZip)
 
 deriving stock instance (Show name, GShow uni, Everywhere uni Show, Show fun, Show ann, Closed uni)
     => Show (Term name uni fun ann)

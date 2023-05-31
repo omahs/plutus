@@ -5,6 +5,7 @@
 {-# LANGUAGE TemplateHaskell       #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE DeriveAnyClass  #-}
 
 module PlutusIR.Core.Type (
     TyName (..),
@@ -33,6 +34,9 @@ module PlutusIR.Core.Type (
 
 import PlutusPrelude
 
+import GHC.Generics hiding (Datatype)
+import Generics.Deriving.FZip
+
 import Control.Lens.TH
 import PlutusCore (Kind, Name, TyName, Type (..), Version (..))
 import PlutusCore qualified as PLC
@@ -60,7 +64,8 @@ terms can thus be used as backwards compatibility is not required.
 -}
 
 data Datatype tyname name uni a = Datatype a (TyVarDecl tyname a) [TyVarDecl tyname a] name [VarDecl tyname name uni a]
-    deriving stock (Functor, Show, Generic)
+    deriving stock (Functor, Show, Generic, Generic1)
+    deriving anyclass (FZip)
 
 varDeclNameString :: VarDecl tyname Name uni a -> String
 varDeclNameString = T.unpack . PLC._nameText . _varDeclName
@@ -93,7 +98,8 @@ data Strictness = NonStrict | Strict
 data Binding tyname name uni fun a = TermBind a Strictness (VarDecl tyname name uni a) (Term tyname name uni fun a)
                            | TypeBind a (TyVarDecl tyname a) (Type tyname uni a)
                            | DatatypeBind a (Datatype tyname name uni a)
-    deriving stock (Functor, Generic)
+    deriving stock (Functor, Generic, Generic1)
+    deriving anyclass (FZip)
 
 deriving stock instance (Show tyname, Show name, GShow uni, Everywhere uni Show, Show fun, Show a, Closed uni)
     => Show (Binding tyname name uni fun a)
@@ -142,7 +148,8 @@ data Term tyname name uni fun a =
                         -- See Note [Constr tag type]
                         | Constr a (Type tyname uni a) Word64 [Term tyname name uni fun a]
                         | Case a (Type tyname uni a) (Term tyname name uni fun a) [Term tyname name uni fun a]
-                        deriving stock (Functor, Generic)
+                        deriving stock (Functor, Generic, Generic1)
+                        deriving anyclass (FZip)
 
 deriving stock instance (Show tyname, Show name, GShow uni, Everywhere uni Show, Show fun, Show a, Closed uni)
     => Show (Term tyname name uni fun a)

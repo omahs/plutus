@@ -122,6 +122,7 @@ import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import Debug.Trace (trace, traceShowId)
 import GHC.Generics (Generic)
+import Generics.Deriving.FZip
 import GHC.Natural (Natural)
 import Prettyprinter
 import Text.PrettyBy.Default
@@ -234,10 +235,7 @@ showText = T.pack . show
 -- | Zips two lists of the same length together, returning 'Nothing' if they are not
 -- the same length.
 zipExact :: [a] -> [b] -> Maybe [(a,b)]
-zipExact [] []         = Just []
-zipExact [a] [b]       = Just [(a,b)]
-zipExact (a:as) (b:bs) = (:) (a, b) <$> zipExact as bs
-zipExact _ _           = Nothing
+zipExact l1 l2 = either (const Nothing) Just $ fzipWith (,) l1 l2
 
 -- | Similar to Maybe's `fromJust`. Returns the `Right` and errors out with the show instance
 -- of the `Left`.

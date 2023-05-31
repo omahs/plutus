@@ -71,6 +71,7 @@ common lang
 library
   import:             lang
   exposed-modules:
+    Generics.Deriving.FZip
     Data.Either.Extras
     Data.List.Extras
     Data.MultiSet.Lens
