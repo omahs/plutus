@@ -1,5 +1,8 @@
-{-# LANGUAGE LambdaCase   #-}
-{-# LANGUAGE ViewPatterns #-}
+--editorconfig-checker-disable
+{-# LANGUAGE BangPatterns      #-}
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ViewPatterns      #-}
 
 {- | Miscellaneous shared code for benchmarking-related things. -}
 module PlutusBenchmark.Common
@@ -37,6 +40,7 @@ import Criterion.Main
 import Criterion.Types (Config (..))
 import Data.ByteString qualified as BS
 import Data.SatInt (fromSatInt)
+import Data.Text as T
 import Flat qualified
 import GHC.IO.Encoding (setLocaleEncoding)
 import System.Directory
@@ -110,12 +114,13 @@ runTermCek =
             runCekDeBruijn PLC.defaultCekParameters Cek.restrictingEnormous Cek.noEmitter
 
 -- | Evaluate a script and return the CPU and memory costs (according to the cost model)
-getCostsCek :: UPLC.Program UPLC.NamedDeBruijn DefaultUni DefaultFun () -> (Integer, Integer)
+getCostsCek :: UPLC.Program UPLC.NamedDeBruijn DefaultUni DefaultFun () -> (Integer, Integer, String)
 getCostsCek (UPLC.Program _ _ prog) =
-    case Cek.runCekDeBruijn PLC.defaultCekParameters Cek.tallying Cek.noEmitter prog of
-      (_res, Cek.TallyingSt _ budget, _logs) ->
+    case Cek.runCekDeBruijn PLC.defaultCekParameters Cek.tallying Cek.logEmitter prog of
+      (_res, Cek.TallyingSt _ budget, logs) ->
           let ExBudget (ExCPU cpu)(ExMemory mem) = budget
-          in (fromSatInt cpu, fromSatInt mem)
+              msgs = T.unpack (T.intercalate "\n" logs)
+          in (fromSatInt cpu, fromSatInt mem, msgs)
 
 {- | Evaluate a PLC term and check that the result matches a given Haskell value
    (perhaps obtained by running the Haskell code that the term was compiled
@@ -173,12 +178,13 @@ printSizeStatistics
 printSizeStatistics h n script = do
     let serialised = Flat.flat (UPLC.UnrestrictedProgram $ toAnonDeBruijnProg script)
         size = BS.length serialised
-        (cpu, mem) = getCostsCek script
+        (cpu, mem, logs) = getCostsCek script
     hPrintf h "  %3s %7d %8s %15d %8s %15d %8s \n"
            (stringOfTestSize n)
            size (percentTxt size PP.max_tx_size)
            cpu  (percentTxt cpu  PP.max_tx_ex_steps)
            mem  (percentTxt mem  PP.max_tx_ex_mem)
+    hPrintf h "====\n%s\n====" logs
 
 
 ---------------- Golden tests for tabular output ----------------

@@ -57,31 +57,6 @@ printCosts_Groth16Verify h = do
 runTests :: Handle -> IO ()
 runTests h = do
 
-  hPrintf h "Hash n bytestrings onto G1 and add points\n\n"
-  printHeader h
-  mapM_ (printCosts_HashAndAddG1 h) [0, 10..150]
-  hPrintf h "\n\n"
-
-  hPrintf h "Hash n bytestrings onto G2 and add points\n\n"
-  printHeader h
-  mapM_ (printCosts_HashAndAddG2 h) [0, 10..150]
-  hPrintf h "\n\n"
-
-  hPrintf h "Uncompress n G1 points and add the results\n\n"
-  printHeader h
-  mapM_ (printCosts_UncompressAndAddG1 h) [0, 10..150]
-  hPrintf h "\n\n"
-
-  hPrintf h "Uncompress n G2 points and add the results\n\n"
-  printHeader h
-  mapM_ (printCosts_UncompressAndAddG2 h) [0, 10..150]
-  hPrintf h "\n\n"
-
-  hPrintf h "Apply pairing to two pairs of points in G1 x G2 and run finalVerify on the results\n\n"
-  printHeader h
-  printCosts_Pairing h
-  hPrintf h "\n\n"
-
   hPrintf h "Groth16 verification example\n\n"
   printHeader h
   printCosts_Groth16Verify h

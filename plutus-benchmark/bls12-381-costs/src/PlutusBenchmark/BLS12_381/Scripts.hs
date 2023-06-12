@@ -1,8 +1,9 @@
 -- editorconfig-checker-disable-file
-{-# LANGUAGE BangPatterns    #-}
-{-# LANGUAGE DataKinds       #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE ViewPatterns    #-}
+{-# LANGUAGE BangPatterns      #-}
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE ViewPatterns      #-}
 
 {- | Approximations of the sort of computations involving BLS12-381 primitives
  that one might wish to perform on the chain.  Real on-chain code will have
@@ -279,9 +280,10 @@ groth16Verify (Tx.bls12_381_G1_uncompress -> alpha')
                       l2 = Tx.bls12_381_millerLoop alpha' beta'
                       l3 = Tx.bls12_381_millerLoop c' delta'
                       p  = Tx.bls12_381_G1_add  abc1' (Tx.bls12_381_G1_scalarMul s abc2')
-                      l4 = Tx.bls12_381_millerLoop p gamma'
-                      y  = Tx.bls12_381_mulMlResult l2 (Tx.bls12_381_mulMlResult l3 l4)
-                  in Tx.bls12_381_finalVerify l1 y
+                      !l4 = Tx.trace "l4" $ Tx.bls12_381_millerLoop p gamma'
+                      !y  = Tx.trace "y" $ Tx.bls12_381_mulMlResult l2 (Tx.bls12_381_mulMlResult l3 l4)
+                      !n = Tx.trace "n" 9 :: Integer
+                  in trace "finalVerify" $ Tx.bls12_381_finalVerify l1 y
 
 {- | Make a UPLC script applying groth16Verify to the inputs.  Passing the
  newtype inputs increases the size and CPU cost slightly, so we unwrap them
