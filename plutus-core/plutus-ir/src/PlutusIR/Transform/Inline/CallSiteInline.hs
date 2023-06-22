@@ -12,7 +12,7 @@ See note [Inlining of fully applied functions].
 module PlutusIR.Transform.Inline.CallSiteInline where
 
 import PlutusCore qualified as PLC
-import PlutusCore.Rename
+import PlutusCore.Rename (liftDupable)
 import PlutusCore.Rename.Internal (Dupable (Dupable))
 import PlutusIR.Analysis.Size
 import PlutusIR.Contexts

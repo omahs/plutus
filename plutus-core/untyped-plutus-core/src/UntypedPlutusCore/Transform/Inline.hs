@@ -26,10 +26,10 @@ module UntypedPlutusCore.Transform.Inline (inline, InlineHints (..)) where
 import PlutusCore qualified as PLC
 import PlutusCore.Annotation
 import PlutusCore.Builtin qualified as PLC
-import PlutusCore.MkPlc (mkIterApp)
 import PlutusCore.Name
 import PlutusCore.Quote
 import PlutusCore.Rename (Dupable, dupable, liftDupable)
+import PlutusCore.Rename.Internal (Dupable (Dupable))
 import PlutusPrelude
 import UntypedPlutusCore.Analysis.Usages qualified as Usages
 import UntypedPlutusCore.Core qualified as UPLC
@@ -80,11 +80,11 @@ makeLenses ''Subst
 data VarInfo name uni fun ann = VarInfo
   { _varBinders :: [name]
   -- ^ Lambda binders in the RHS (definition) of the variable.
-  , _varRhs     :: Term name uni fun ann
-  -- ^ The RHS (definition) of the variable.
-  , _varRhsBody :: InlineTerm name uni fun ann
-  -- ^ The body of the RHS of the variable (i.e., RHS minus the binders). Using `InlineTerm`
-  -- here to ensure the body is renamed when inlined.
+  , _varRhs     :: InlineTerm name uni fun ann
+  -- ^ The RHS (definition) of the variable. Using `InlineTerm`
+  -- here to ensure global uniqueness is preserved.
+  , _varRhsBody :: Term name uni fun ann
+  -- ^ The body of the RHS of the variable (i.e., RHS minus the binders).
   }
 
 makeLenses ''VarInfo
@@ -250,8 +250,8 @@ processSingleBinding body (Def vd@(UVarDecl a n) rhs0) = do
       modify' . extendVarInfo n $
         VarInfo
           { _varBinders = binders
-          , _varRhs = rhs
-          , _varRhsBody = (Done (dupable rhsBody))
+          , _varRhs = Done (dupable rhs)
+          , _varRhsBody = rhsBody
           }
       pure . Just $ Def vd rhs
     Nothing -> pure Nothing
@@ -452,22 +452,31 @@ fullyApplyAndBetaReduce ::
   [(a, Term name uni fun a)] ->
   InlineM name uni fun a (Maybe (Term name uni fun a))
 fullyApplyAndBetaReduce info args0 = do
-  rhsBody <- liftDupable (let Done rhsBody = info ^. varRhsBody in rhsBody)
-  let go ::
+      -- cannot use `liftDupable` here because then the variables will get renamed and we won't be
+      -- able to find them to do the substitutions
+  let Done (Dupable rhs) = info ^. varRhs
+      rhsBody = info ^. varRhsBody
+      getFnBody :: Term name uni fun ann -> Term name uni fun ann
+      getFnBody (LamAbs _ann _n body) = body
+      getFnBody tm                    = tm
+      go ::
+        -- | The rhs of the variable
         Term name uni fun a ->
+        -- | The lambdas of the function
         [name] ->
         [(a, Term name uni fun a)] ->
         InlineM name uni fun a (Maybe (Term name uni fun a))
       go acc bs args = case (bs, args) of
-        ([], _) -> pure . Just $ mkIterApp acc args
+        ([], _) -> pure $ Just acc
         (param : params, (_ann, arg) : args') -> do
           safe <- safeToBetaReduce param arg
           if safe
             then do
               acc' <-
-                termSubstNamesM
+                termSubstNamesM -- substitute the var with the arg in the function body
+                  -- rename before substitution to ensure global uniqueness
                   (\n -> if n == param then Just <$> PLC.rename arg else pure Nothing)
-                  acc
+                  (getFnBody acc) -- drop one lambda
               go acc' params args'
             else pure Nothing
         _ -> pure Nothing
@@ -480,7 +489,7 @@ fullyApplyAndBetaReduce info args0 = do
         Term name uni fun a ->
         InlineM name uni fun a Bool
       safeToBetaReduce a = shouldUnconditionallyInline a rhsBody
-  go rhsBody (info ^. varBinders) args0
+  go rhs (info ^. varBinders) args0
 
 {- | This works in the same way as `PlutusIR.Transform.Inline.CallSiteInline.inlineSaturatedApp`.
 See Note [Inlining and beta reduction of fully applied functions].
@@ -498,10 +507,10 @@ inlineSaturatedApp t
           fullyApplyAndBetaReduce varInfo args >>= \case
             Nothing -> pure t
             Just fullyApplied -> do
+              rhs <- liftDupable (let Done rhs = _varRhs varInfo in rhs)
               let
                 -- Inline only if the size is no bigger than not inlining.
                 sizeIsOk = termSize fullyApplied <= termSize t
-                rhs = varInfo ^. varRhs
                 -- Cost is always OK if the RHS is a LamAbs, but may not be otherwise.
                 costIsOk = costIsAcceptable rhs
               -- The RHS is always pure if it is a LamAbs, but may not be otherwise.

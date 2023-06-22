@@ -25,6 +25,7 @@ nested = Force () $ Force () $ Delay () $ Delay () $ mkConstant @Integer () 1
 extraDelays :: Term Name PLC.DefaultUni PLC.DefaultFun ()
 extraDelays = Force () $ Delay () $ Delay () $ mkConstant @Integer () 1
 
+{- (force [ (lam a_1 (delay [ a_1 a_1 ])) (con integer 1) ]) -}
 interveningLambda :: Term Name PLC.DefaultUni PLC.DefaultFun ()
 interveningLambda = runQuote $ do
   n <- freshName "a"
