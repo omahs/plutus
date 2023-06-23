@@ -134,6 +134,7 @@ fullyApplyAndBetaReduce info args0 = do
       -- able to find them to do the substitutions
   let Done (Dupable rhs) = varRhs info
       rhsBody = varRhsBody info
+      -- | Drop one term or type lambda abstraction of the given term.
       getFnBody :: Term tyname name uni fun ann -> Term tyname name uni fun ann
       getFnBody (LamAbs _ann _n _ty body) = body
       getFnBody (TyAbs _ann _n _kd body)  = body
@@ -155,14 +156,14 @@ fullyApplyAndBetaReduce info args0 = do
                 termSubstNamesM -- substitute the var with the arg in the function body
                   -- rename before substitution to ensure global uniqueness
                   (\n -> if n == param then Just <$> PLC.rename arg else pure Nothing)
-                  (getFnBody acc) -- drop one term lambda
+                  (getFnBody acc) -- drop the term lambda that was beta reduced
               go acc' arity' args'
             else pure Nothing
         (TypeParam param: arity', TypeAppContext arg _ args') -> do
           acc' <-
             termSubstTyNamesM -- substitute the var with the arg in the function body
               (\n -> if n == param then Just <$> PLC.rename arg else pure Nothing)
-              (getFnBody acc) -- drop one type lambda
+              (getFnBody acc) -- drop the type lambda that was beta reduced
           go acc' arity' args'
         _ -> pure Nothing
 
