@@ -191,6 +191,9 @@ data Cases (Γ : Ctx Φ) (B : Φ ⊢Nf⋆ *) : ∀{n} → Vec (List (Φ ⊢Nf⋆
 The actual type of terms
 
 \begin{code}
+mkCaseType : ∀{Φ} (A : Φ ⊢Nf⋆ *) → List (Φ ⊢Nf⋆ *) → Φ ⊢Nf⋆ *
+mkCaseType A = foldr _⇒_ A
+
 infixl 7 _·⋆_/_
 
 data _⊢_ (Γ : Ctx Φ) : Φ ⊢Nf⋆ * → Set where

@@ -189,6 +189,12 @@ Frames for constructors need to differentiate between evaluated arguments
 and arguments which are not yet evaluated. This is modelled by VListZipper. 
 
 ```
+data VListZipper : (tot : List (∅ ⊢Nf⋆ *)) → ∀{vs}{h}{ts : List (∅ ⊢Nf⋆ *)} → tot ≣ vs <>> (h ∷ ts) → Set  where 
+     mkVZ : ∀{tot vs A ts} → {tvs : IBwd (∅ ⊢_) vs} → {idx : tot ≣ vs <>> (A ∷ ts)} → VList tvs → ConstrArgs ∅ ts → VListZipper tot idx
+
+plugZipper : ∀{tot vs h ts}{idx : tot ≣ vs <>> (h ∷ ts)} → VListZipper tot idx → (t : ∅ ⊢ h) → IList (∅ ⊢_) tot  
+plugZipper {idx = idx}(mkVZ {tvs = tvs} vs ts) t = substEq (IList (∅ ⊢_)) (sym (lem-≣-<>> idx)) (tvs <>>I (t ∷ ts))
+
 data Frame : (T : ∅ ⊢Nf⋆ *) → (H : ∅ ⊢Nf⋆ *) → Set where
   -·_     : {A B : ∅ ⊢Nf⋆ *} → ∅ ⊢ A → Frame B (A ⇒ B)
   -·v     : ∀{A B : ∅ ⊢Nf⋆ *}{t : ∅ ⊢ A} → Value t → Frame B (A ⇒ B)
