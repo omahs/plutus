@@ -7,8 +7,10 @@ module PlutusIR.Transform.Substitute (
   typeSubstTyNames,
   termSubstNames,
   termSubstNamesM,
+  termSubstNamesT,
   termSubstTyNames,
   termSubstTyNamesM,
+  termSubstTyNamesT,
   bindingSubstNames,
   bindingSubstTyNames,
 ) where
@@ -18,6 +20,7 @@ import PlutusIR
 import PlutusPrelude
 
 import Control.Lens
+import Control.Monad.Trans.Maybe
 
 {-# INLINE substVarA #-}
 -- | Applicatively replace a variable using the given function.
@@ -54,6 +57,13 @@ termSubstNamesM ::
   m (Term tyname name uni fun ann)
 termSubstNamesM = transformMOf termSubterms . substVarA
 
+termSubstNamesT ::
+  (Monad m) =>
+  (name -> MaybeT m (Term tyname name uni fun ann)) ->
+  Term tyname name uni fun ann ->
+  m (Term tyname name uni fun ann)
+termSubstNamesT f = termSubstNamesM $ runMaybeT . f
+
 -- | Naively substitute type names using the given functions (i.e. do not substitute binders).
 termSubstTyNames ::
   (tyname -> Maybe (Type tyname uni a)) ->
@@ -71,6 +81,13 @@ termSubstTyNamesM ::
   m (Term tyname name uni fun ann)
 termSubstTyNamesM =
   transformMOf termSubterms . traverseOf termSubtypes . transformMOf typeSubtypes . substTyVarA
+
+termSubstTyNamesT ::
+  (Monad m) =>
+  (tyname -> MaybeT m (Type tyname uni ann)) ->
+  Term tyname name uni fun ann ->
+  m (Term tyname name uni fun ann)
+termSubstTyNamesT f = termSubstTyNamesM $ runMaybeT . f
 
 -- | Naively substitute names using the given functions (i.e. do not substitute binders).
 bindingSubstNames ::

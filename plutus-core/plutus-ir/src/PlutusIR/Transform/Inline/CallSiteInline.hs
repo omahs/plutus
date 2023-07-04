@@ -20,7 +20,10 @@ import PlutusIR.Core
 import PlutusIR.Transform.Inline.Utils
 import PlutusIR.Transform.Substitute
 
+import Control.Applicative
 import Control.Monad.State
+import Control.Monad.Trans.Maybe
+import Data.Maybe
 
 {- Note [Inlining and beta reduction of fully applied functions]
 
@@ -128,7 +131,7 @@ fullyApplyAndBetaReduce ::
   VarInfo tyname name uni fun ann ->
   -- | The arguments
   AppContext tyname name uni fun ann ->
-  InlineM tyname name uni fun ann (Maybe (Term tyname name uni fun ann))
+  MaybeT (InlineM tyname name uni fun ann) (Term tyname name uni fun ann)
 fullyApplyAndBetaReduce info args0 = do
       -- cannot use `liftDupable` here because then the variables will get renamed and we won't be
       -- able to find them to do the substitutions
@@ -144,28 +147,25 @@ fullyApplyAndBetaReduce info args0 = do
         Term tyname name uni fun ann ->
         Arity tyname name ->
         AppContext tyname name uni fun ann ->
-        InlineM tyname name uni fun ann (Maybe (Term tyname name uni fun ann))
+        MaybeT (InlineM tyname name uni fun ann) (Term tyname name uni fun ann)
       go acc arity args = case (arity, args) of
         -- fully applied
-        ([], _) -> pure $ Just acc
+        ([], _) -> pure acc
         (TermParam param: arity', TermAppContext arg _ args') -> do
-          safe <- safeToBetaReduce param arg
-          if safe
-            then do
-              acc' <- do
-                termSubstNamesM -- substitute the var with the arg in the function body
-                  -- rename before substitution to ensure global uniqueness
-                  (\n -> if n == param then Just <$> PLC.rename arg else pure Nothing)
-                  (getFnBody acc) -- drop the term lambda that was beta reduced
-              go acc' arity' args'
-            else pure Nothing
+          guard =<< safeToBetaReduce param arg
+          acc' <-
+            termSubstNamesT -- substitute the var with the arg in the function body
+              -- rename before substitution to ensure global uniqueness
+              (\n -> guard (n == param) *> PLC.rename arg)
+              (getFnBody acc) -- drop the term lambda that was beta reduced
+          go acc' arity' args'
         (TypeParam param: arity', TypeAppContext arg _ args') -> do
           acc' <-
-            termSubstTyNamesM -- substitute the var with the arg in the function body
-              (\n -> if n == param then Just <$> PLC.rename arg else pure Nothing)
+            termSubstTyNamesT -- substitute the var with the arg in the function body
+              (\n -> guard (n == param) *> PLC.rename arg)
               (getFnBody acc) -- drop the type lambda that was beta reduced
           go acc' arity' args'
-        _ -> pure Nothing
+        _ -> empty
 
       -- Is it safe to turn `(\a -> body) arg` into `body [a := arg]`?
       -- The criteria is the same as the criteria for inlining `a` in
@@ -175,9 +175,12 @@ fullyApplyAndBetaReduce info args0 = do
         name ->
         -- `arg`
         Term tyname name uni fun ann ->
-        InlineM tyname name uni fun ann Bool
-      safeToBetaReduce a = shouldUnconditionallyInline Strict a rhsBody
+        MaybeT (InlineM tyname name uni fun ann) Bool
+      safeToBetaReduce a = lift . shouldUnconditionallyInline Strict a rhsBody
   go rhs (varArity info) args0
+
+fromMaybeT :: Functor f => a -> MaybeT f a -> f a
+fromMaybeT x = fmap (fromMaybe x) . runMaybeT
 
 -- | Consider whether to inline an application.
 inlineSaturatedApp ::
@@ -185,30 +188,25 @@ inlineSaturatedApp ::
   (InliningConstraints tyname name uni fun) =>
   Term tyname name uni fun ann ->
   InlineM tyname name uni fun ann (Term tyname name uni fun ann)
-inlineSaturatedApp t
-  | (Var _ann name, args) <- splitApplication t =
-      gets (lookupVarInfo name) >>= \case
-        Just varInfo ->
-          fullyApplyAndBetaReduce varInfo args >>= \case
-            Just fullyApplied -> do
-              rhs <- liftDupable (let Done rhs = varRhs varInfo in rhs)
-              let -- Inline only if the size is no bigger than not inlining.
-                  sizeIsOk = termSize fullyApplied <= termSize t
-                  -- The definition itself will be inlined, so we need to check that the cost
-                  -- of that is acceptable. Note that we do _not_ check the cost of the _body_.
-                  -- We would have paid that regardless.
-                  -- Consider e.g. `let y = \x. f x`. We pay the cost of the `f x` at
-                  -- every call site regardless. The work that is being duplicated is
-                  -- the work for the lambda.
-                  costIsOk = costIsAcceptable rhs
-              -- check if binding is pure to avoid duplicated effects.
-              -- For strict bindings we can't accidentally make any effects happen less often
-              -- than it would have before, but we can make it happen more often.
-              -- We could potentially do this safely in non-conservative mode.
-              rhsPure <- isTermBindingPure (varStrictness varInfo) rhs
-              pure $ if sizeIsOk && costIsOk && rhsPure then fullyApplied else t
-            Nothing -> pure t
-        -- The variable maybe a *recursive* let binding, in which case it won't be in the map,
-        -- and we don't process it. ATM recursive bindings aren't inlined.
-        Nothing -> pure t
-  | otherwise = pure t
+inlineSaturatedApp t = fromMaybeT t $ do
+    (Var _ann name, args) <- pure $ splitApplication t
+    -- The variable maybe a *recursive* let binding, in which case it won't be in the map,
+    -- and we don't process it. ATM recursive bindings aren't inlined.
+    varInfo <- MaybeT . gets $ lookupVarInfo name
+    fullyApplied <- fullyApplyAndBetaReduce varInfo args
+    rhs <- liftDupable (let Done rhs = varRhs varInfo in rhs)
+    let -- Inline only if the size is no bigger than not inlining.
+        sizeIsOk = termSize fullyApplied <= termSize t
+        -- The definition itself will be inlined, so we need to check that the cost
+        -- of that is acceptable. Note that we do _not_ check the cost of the _body_.
+        -- We would have paid that regardless.
+        -- Consider e.g. `let y = \x. f x`. We pay the cost of the `f x` at
+        -- every call site regardless. The work that is being duplicated is
+        -- the work for the lambda.
+        costIsOk = costIsAcceptable rhs
+    -- check if binding is pure to avoid duplicated effects.
+    -- For strict bindings we can't accidentally make any effects happen less often
+    -- than it would have before, but we can make it happen more often.
+    -- We could potentially do this safely in non-conservative mode.
+    rhsPure <- lift $ isTermBindingPure (varStrictness varInfo) rhs
+    pure $ if sizeIsOk && costIsOk && rhsPure then fullyApplied else t
