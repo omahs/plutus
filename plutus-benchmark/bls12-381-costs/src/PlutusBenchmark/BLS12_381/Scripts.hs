@@ -705,19 +705,28 @@ aggregateMultiKeyG2Script message pubKeys aggregateSignature bs16Null dst = do
 
       calcAggregatedPubkeys :: Integer -> [BuiltinBLS12_381_G2_Element] -> BuiltinBLS12_381_G2_Element
       calcAggregatedPubkeys dsScalar' pksDeser' = do
-        let
-          pksDeserLength = length pksDeser'
-          dsScalars = calcDsScalars 1 pksDeserLength [dsScalar']
-        go 1 pksDeserLength (calcAggregatedPubkey 0 dsScalars) dsScalars
-          where
-            calcDsScalars l u acc
-              | l >= u = acc
-              | otherwise =  calcDsScalars (l + 1) u (acc ++ [(acc !! (l - 1)) * head acc])
+        let dsScalars = calcDsScalars pksDeser' [dsScalar']
+        go 1 (drop 1 pksDeser') (drop 1 dsScalars) (calcAggregatedPubkey (head pksDeser') (head dsScalars))
 
-            calcAggregatedPubkey i dsScalars' = (dsScalars' !! i) `Tx.bls12_381_G2_scalarMul` (pksDeser' !! i)
-            go i u acc dsScalars'
-              | i >= u = acc
-              | otherwise = go (i + 1) u (acc `Tx.bls12_381_G2_add` (calcAggregatedPubkey i dsScalars')) dsScalars'
+      calcDsScalars :: [BuiltinBLS12_381_G2_Element] -> [Integer] -> [Integer]
+      calcDsScalars [] acc              = acc
+      calcDsScalars (_:xs) [x']         = calcDsScalars xs [x', x' * x']
+      calcDsScalars (_:xs) acc@(x':xs') = calcDsScalars xs (acc ++ [last xs' * x'])
+      calcDsScalars _ _                 = traceError "calcDsScalars unexpected"
+
+      go :: Integer -> [BuiltinBLS12_381_G2_Element] -> [Integer] -> BuiltinBLS12_381_G2_Element -> BuiltinBLS12_381_G2_Element
+      go _ [] _ acc     = acc
+      go i (x:xs) (x':xs') acc = go (i + 1) xs xs' (acc `Tx.bls12_381_G2_add` (calcAggregatedPubkey x x'))
+      go _ _ _ _ = traceError "go unexpected"
+
+      calcAggregatedPubkey :: BuiltinBLS12_381_G2_Element -> Integer -> BuiltinBLS12_381_G2_Element
+      calcAggregatedPubkey pk ds = ds `Tx.bls12_381_G2_scalarMul` pk
+
+      -- PlutusTx.Prelude has no last
+      last :: [a] -> a
+      last []     = traceError "last: needs at least two elements"
+      last [x]    = x
+      last (_:xs) = last xs
 
 checkAggregateMultiKeyG2Script :: Bool
 checkAggregateMultiKeyG2Script =

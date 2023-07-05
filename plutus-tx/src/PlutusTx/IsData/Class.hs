@@ -139,6 +139,18 @@ instance UnsafeFromData Void where
     {-# INLINABLE unsafeFromBuiltinData #-}
     unsafeFromBuiltinData _ = traceError voidIsNotSupportedError
 
+instance ToData Builtins.BuiltinBLS12_381_G2_Element where
+    {-# INLINEABLE toBuiltinData #-}
+    toBuiltinData = toBuiltinData . Builtins.bls12_381_G2_compress
+instance FromData Builtins.BuiltinBLS12_381_G2_Element where
+    fromBuiltinData d = case (fromBuiltinData d) :: Maybe BI.BuiltinByteString of
+        Nothing -> Nothing
+        Just b  -> Just $ Builtins.bls12_381_G2_uncompress b
+    {-# INLINEABLE fromBuiltinData #-}
+instance UnsafeFromData Builtins.BuiltinBLS12_381_G2_Element where
+    {-# INLINEABLE unsafeFromBuiltinData #-}
+    unsafeFromBuiltinData = Builtins.bls12_381_G2_uncompress . unsafeFromBuiltinData
+
 -- | Convert a value to 'PLC.Data'.
 toData :: (ToData a) => a -> PLC.Data
 toData a = builtinDataToData (toBuiltinData a)
