@@ -704,19 +704,20 @@ aggregateMultiKeyG2Script message pubKeys aggregateSignature bs16Null dst = do
       foldl1 f (x:xs) = Tx.foldl f x xs
 
       calcAggregatedPubkeys :: Integer -> [BuiltinBLS12_381_G2_Element] -> BuiltinBLS12_381_G2_Element
-      calcAggregatedPubkeys dsScalar' pksDeser' =
-        go 1 (length pksDeser') (calc 0)
+      calcAggregatedPubkeys dsScalar' pksDeser' = do
+        let
+          pksDeserLength = length pksDeser'
+          dsScalars = calcDsScalars 1 pksDeserLength [dsScalar']
+        go 1 pksDeserLength (calcAggregatedPubkey 0 dsScalars) dsScalars
           where
-            calc i = (dsScalar' `power` (i + 1)) `Tx.bls12_381_G2_scalarMul` (pksDeser' Tx.!! i)
-            go i u acc
-              | i >= u = acc
-              | otherwise = go (i + 1) u (acc `Tx.bls12_381_G2_add` (calc i))
+            calcDsScalars l u acc
+              | l >= u = acc
+              | otherwise =  calcDsScalars (l + 1) u (acc ++ [(acc !! (l - 1)) * head acc])
 
-      power :: Integer -> Integer -> Integer
-      power x n
-        | n == 0 = 1
-        | n > 0 = x * power x (n - 1)
-        | otherwise = 0
+            calcAggregatedPubkey i dsScalars' = (dsScalars' !! i) `Tx.bls12_381_G2_scalarMul` (pksDeser' !! i)
+            go i u acc dsScalars'
+              | i >= u = acc
+              | otherwise = go (i + 1) u (acc `Tx.bls12_381_G2_add` (calcAggregatedPubkey i dsScalars')) dsScalars'
 
 checkAggregateMultiKeyG2Script :: Bool
 checkAggregateMultiKeyG2Script =
