@@ -3,7 +3,9 @@
 
 {-# LANGUAGE ConstraintKinds       #-}
 {-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE EmptyCase             #-}
 {-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE TypeApplications      #-}
@@ -146,6 +148,9 @@ instance PrettyBy ConstConfig Data where
 
 instance PrettyBy ConstConfig BS.ByteString where
     prettyBy _ b = "#" <> toBytes b
+
+instance PrettyBy ConstConfig (Canonical a) where
+    prettyBy _ = \case{}
 
 instance Pretty (SomeTypeIn uni) => Pretty (SomeTypeIn (Kinded uni)) where
     pretty (SomeTypeIn (Kinded uni)) = pretty (SomeTypeIn uni)

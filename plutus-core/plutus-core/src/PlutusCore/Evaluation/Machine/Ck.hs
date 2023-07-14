@@ -135,6 +135,9 @@ instance HasConstant (CkValue uni fun) where
 
     fromConstant = VCon
 
+instance EqCanonical (CkValue uni fun) where
+    eqCanonical _ _ = undefined
+
 data Frame uni fun
     = FrameAwaitArg (CkValue uni fun)                       -- ^ @[V _]@
     | FrameAwaitFunTerm (Term TyName Name uni fun ())       -- ^ @[_ N]@

@@ -118,6 +118,7 @@ library
     PlutusCore.Evaluation.Machine.MachineParameters.Default
     PlutusCore.Evaluation.Result
     PlutusCore.Examples.Builtins
+    PlutusCore.Examples.Data.Canonical
     PlutusCore.Examples.Data.Data
     PlutusCore.Examples.Data.InterList
     PlutusCore.Examples.Data.List

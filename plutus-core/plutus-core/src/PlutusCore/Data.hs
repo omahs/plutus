@@ -1,12 +1,14 @@
-{-# LANGUAGE BangPatterns       #-}
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE LambdaCase         #-}
-{-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE TypeApplications   #-}
+{-# LANGUAGE BangPatterns             #-}
+{-# LANGUAGE DeriveAnyClass           #-}
+{-# LANGUAGE DeriveDataTypeable       #-}
+{-# LANGUAGE DerivingStrategies       #-}
+{-# LANGUAGE EmptyDataDeriving        #-}
+{-# LANGUAGE LambdaCase               #-}
+{-# LANGUAGE OverloadedStrings        #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
+{-# LANGUAGE TypeApplications         #-}
 
-module PlutusCore.Data (Data (..)) where
+module PlutusCore.Data (Canonical, Data (..)) where
 
 import Codec.CBOR.Decoding (Decoder)
 import Codec.CBOR.Decoding qualified as CBOR
@@ -22,12 +24,17 @@ import Data.ByteString qualified as BS
 import Data.ByteString.Base64 qualified as Base64
 import Data.ByteString.Lazy qualified as BSL
 import Data.Data qualified
+import Data.Kind as GHC
 import Data.Text.Encoding qualified as Text
 import Data.Word (Word64, Word8)
 import GHC.Generics
 import NoThunks.Class
 import Prelude
 import Prettyprinter
+
+type Canonical :: GHC.Type -> GHC.Type
+data Canonical a
+    deriving stock (Show, Eq)
 
 -- Attempting to make this strict made code slower by 2%,
 -- see https://github.com/input-output-hk/plutus/pull/4622

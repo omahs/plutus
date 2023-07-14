@@ -67,7 +67,8 @@ data BuiltinMeaning val cost =
         (cost -> BuiltinRuntime val)
 
 -- | Constraints available when defining a built-in function.
-type HasMeaningIn uni val = (Typeable val, ExMemoryUsage val, HasConstantIn uni val)
+type HasMeaningIn uni val =
+    (Typeable val, ExMemoryUsage val, HasConstantIn uni val, EqCanonical val)
 
 -- | A type class for \"each function from a set of built-in functions has a 'BuiltinMeaning'\".
 class (Typeable uni, Typeable fun, Bounded fun, Enum fun, Ix fun, Default (BuiltinVersion fun)) =>

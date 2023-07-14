@@ -1,0 +1,6 @@
+/\a ->
+  \(toData : a -> data) (x : a) (y : a) ->
+    (Left equalsCanonical)
+      {a}
+      ((Left mkCanonical) {a} toData x)
+      ((Left mkCanonical) {a} toData y)

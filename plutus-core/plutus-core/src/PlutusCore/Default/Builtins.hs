@@ -144,6 +144,9 @@ data DefaultFun
     | Bls12_381_millerLoop
     | Bls12_381_mulMlResult
     | Bls12_381_finalVerify
+    | MkCanonical
+    | UnCanonical
+    | EqualsCanonical
 
     deriving stock (Show, Eq, Ord, Enum, Bounded, Generic, Ix)
     deriving anyclass (NFData, Hashable, PrettyBy PrettyConfigPlc)
@@ -1468,6 +1471,28 @@ instance uni ~ DefaultUni => ToBuiltinMeaning uni DefaultFun where
         makeBuiltinMeaning
             BLS12_381.Pairing.finalVerify
             (runCostingFunTwoArguments . paramBls12_381_finalVerify)
+    toBuiltinMeaning _ver MkCanonical =
+        makeBuiltinMeaning
+            mkCanonical
+            (\_ _ _ -> ExBudgetLast mempty)
+      where
+        mkCanonical :: Opaque val (a -> Data) -> Opaque val a -> Opaque val (Canonical a)
+        mkCanonical _ = coerce
+    toBuiltinMeaning _ver UnCanonical =
+        makeBuiltinMeaning
+            unCanonical
+            (\_ _ -> ExBudgetLast mempty)
+      where
+        unCanonical :: Opaque val (Canonical a) -> Opaque val a
+        unCanonical = coerce
+    toBuiltinMeaning _ver EqualsCanonical =
+        makeBuiltinMeaning
+            equalsCanonical
+            (\_ _ _ -> ExBudgetLast mempty)
+      where
+        equalsCanonical
+            :: Opaque val (Canonical a) -> Opaque val (Canonical a) -> EvaluationResult Bool
+        equalsCanonical val1 val2 = fromEqCanonicalResult $ eqCanonical val1 val2
     -- See Note [Inlining meanings of builtins].
     {-# INLINE toBuiltinMeaning #-}
 
@@ -1573,6 +1598,9 @@ instance Flat DefaultFun where
               Bls12_381_millerLoop            -> 68
               Bls12_381_mulMlResult           -> 69
               Bls12_381_finalVerify           -> 70
+              MkCanonical                     -> 71
+              UnCanonical                     -> 72
+              EqualsCanonical                 -> 73
 
     decode = go =<< decodeBuiltin
         where go 0  = pure AddInteger
@@ -1646,6 +1674,9 @@ instance Flat DefaultFun where
               go 68 = pure Bls12_381_millerLoop
               go 69 = pure Bls12_381_mulMlResult
               go 70 = pure Bls12_381_finalVerify
+              go 71 = pure MkCanonical
+              go 72 = pure UnCanonical
+              go 73 = pure EqualsCanonical
               go t  = fail $ "Failed to decode builtin tag, got: " ++ show t
 
     size _ n = n + builtinTagWidth

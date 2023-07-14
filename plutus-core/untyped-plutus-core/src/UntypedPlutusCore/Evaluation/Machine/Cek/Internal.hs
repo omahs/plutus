@@ -552,6 +552,25 @@ instance HasConstant (CekValue uni fun ann) where
 
     fromConstant = VCon
 
+instance (GEq uni, Closed uni, uni `Everywhere` Eq) => EqCanonical (ArgStack uni fun ann) where
+    eqCanonical EmptyStack = \case
+        EmptyStack -> EqCanonicalTrue
+        _          -> EqCanonicalFalse
+    eqCanonical (ConsStack arg1 args1) = \case
+        ConsStack arg2 args2 -> eqCanonical arg1 arg2 <> eqCanonical args1 args2
+        _                    -> EqCanonicalFalse
+
+instance (GEq uni, Closed uni, uni `Everywhere` Eq) => EqCanonical (CekValue uni fun ann) where
+    eqCanonical (VConstr i1 args1) = \case
+        VConstr i2 args2 -> toEqCanonicalResult (i1 == i2) <> eqCanonical args1 args2
+        VCon _           -> EqCanonicalFalse
+        _                -> EqCanonicalUnexpectedInput
+    eqCanonical (VCon con1) = \case
+        VCon con2   -> toEqCanonicalResult $ con1 == con2
+        VConstr _ _ -> EqCanonicalFalse
+        _           -> EqCanonicalUnexpectedInput
+    eqCanonical _ = \_ -> EqCanonicalUnexpectedInput
+
 {-|
 The context in which the machine operates.
 

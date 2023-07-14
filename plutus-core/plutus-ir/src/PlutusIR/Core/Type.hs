@@ -36,7 +36,7 @@ import PlutusPrelude
 import Control.Lens.TH
 import PlutusCore (Kind, Name, TyName, Type (..), Version (..))
 import PlutusCore qualified as PLC
-import PlutusCore.Builtin (HasConstant (..), throwNotAConstant)
+import PlutusCore.Builtin (EqCanonical (..), HasConstant (..), throwNotAConstant)
 import PlutusCore.Core (UniOf)
 import PlutusCore.Evaluation.Machine.ExMemoryUsage
 import PlutusCore.Flat ()
@@ -159,6 +159,9 @@ instance HasConstant (Term tyname name uni fun ()) where
     asConstant _                = throwNotAConstant
 
     fromConstant = Constant ()
+
+instance EqCanonical (Term tyname name uni fun ()) where
+    eqCanonical _ _ = undefined
 
 instance TermLike (Term tyname name uni fun) tyname name uni fun where
     var      = Var

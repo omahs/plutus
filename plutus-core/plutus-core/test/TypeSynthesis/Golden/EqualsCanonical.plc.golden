@@ -1,0 +1,3 @@
+(all
+  a (type) (fun [ (con canonical) a ] (fun [ (con canonical) a ] (con bool)))
+)

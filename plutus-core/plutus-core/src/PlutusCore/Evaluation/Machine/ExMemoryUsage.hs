@@ -1,5 +1,7 @@
 -- editorconfig-checker-disable-file
+{-# LANGUAGE EmptyCase            #-}
 {-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE LambdaCase           #-}
 {-# LANGUAGE MagicHash            #-}
 {-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE TypeOperators        #-}
@@ -150,6 +152,9 @@ flattenCostRose (CostRose cost (rose : forest)) = CostCons cost $ flattenCostRos
 class ExMemoryUsage a where
     -- Inlining the implementations of this method gave us a 1-2% speedup.
     memoryUsage :: a -> CostRose
+
+instance ExMemoryUsage (Canonical a) where
+    memoryUsage = \case{}
 
 instance (ExMemoryUsage a, ExMemoryUsage b) => ExMemoryUsage (a, b) where
     memoryUsage (a, b) = CostRose 1 [memoryUsage a, memoryUsage b]

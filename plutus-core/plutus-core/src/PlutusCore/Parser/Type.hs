@@ -143,6 +143,7 @@ defaultUni = choice $ map try
     , someType @_ @BLS12_381.G1.Element       <$ symbol "bls12_381_G1_element"
     , someType @_ @BLS12_381.G2.Element       <$ symbol "bls12_381_G2_element"
     , someType @_ @BLS12_381.Pairing.MlResult <$ symbol "bls12_381_mlresult"
+    , someType @_ @Canonical                  <$ symbol "canonical"
     ]
 
 tyName :: Parser TyName

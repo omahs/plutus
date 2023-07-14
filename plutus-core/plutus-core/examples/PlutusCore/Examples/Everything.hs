@@ -21,6 +21,7 @@ import PlutusCore.MkPlc
 import PlutusCore.StdLib.Type
 
 import PlutusCore.Examples.Builtins
+import PlutusCore.Examples.Data.Canonical
 import PlutusCore.Examples.Data.Data
 import PlutusCore.Examples.Data.InterList
 import PlutusCore.Examples.Data.List
@@ -37,6 +38,9 @@ examples =
           [ treeFolderContents "Data"
               [ plcTermFile "ofoldrData" ofoldrData
               , plcTermFile "exampleData" exampleData
+              ]
+          , treeFolderContents "Canonical"
+              [ plcTermFile "equalsCanonicalViaData" $ mapFun Left equalsCanonicalViaData
               ]
           , treeFolderContents "InterList"
               [ plcTypeFile "InterList"      $ _recursiveType interListData

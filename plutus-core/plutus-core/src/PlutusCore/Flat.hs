@@ -1,5 +1,6 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
+{-# LANGUAGE EmptyCase            #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE GADTs                #-}
 {-# LANGUAGE LambdaCase           #-}
@@ -19,7 +20,7 @@ module PlutusCore.Flat
     ) where
 
 import PlutusCore.Core
-import PlutusCore.Data (Data)
+import PlutusCore.Data (Canonical, Data)
 import PlutusCore.DeBruijn
 import PlutusCore.Name
 
@@ -138,6 +139,11 @@ decodeConstant :: Get Word8
 decodeConstant = dBEBits8 constantWidth
 
 deriving via AsSerialize Data instance Flat Data
+
+instance Flat (Canonical a) where
+    encode = \case{}
+    decode = fail "nope"
+    size = \case{}
 
 decodeKindedUniFlat :: Closed uni => Get (SomeTypeIn (Kinded uni))
 decodeKindedUniFlat =

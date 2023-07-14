@@ -131,6 +131,7 @@ constantOf expectParens uni = case uni of
     DefaultUniBLS12_381_G2_Element                                    -> conBLS12_381_G2_Element
     DefaultUniBLS12_381_MlResult
         -> fail "Constants of type bls12_381_mlresult are not supported"
+    DefaultUniCanonical `DefaultUniApply` _ -> fail "Can't parse 'Canonical' constants"
 
 -- | Parser of constants whose type is in 'DefaultUni'.
 constant :: Parser (Some (ValueOf DefaultUni))

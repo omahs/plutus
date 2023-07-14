@@ -10,10 +10,15 @@ module PlutusCore.Builtin.HasConstant
     , HasConstantIn
     , fromValueOf
     , fromValue
+    , EqCanonicalResult (..)
+    , toEqCanonicalResult
+    , fromEqCanonicalResult
+    , EqCanonical (..)
     ) where
 
 import PlutusCore.Core
 import PlutusCore.Evaluation.Machine.Exception
+import PlutusCore.Evaluation.Result
 import PlutusCore.Name
 
 import Universe
@@ -47,3 +52,30 @@ instance HasConstant (Term TyName Name uni fun ()) where
     asConstant _                = throwNotAConstant
 
     fromConstant = Constant ()
+
+data EqCanonicalResult
+    = EqCanonicalTrue
+    | EqCanonicalFalse
+    | EqCanonicalUnexpectedInput
+
+toEqCanonicalResult :: Bool -> EqCanonicalResult
+toEqCanonicalResult True  = EqCanonicalTrue
+toEqCanonicalResult False = EqCanonicalFalse
+
+fromEqCanonicalResult :: EqCanonicalResult -> EvaluationResult Bool
+fromEqCanonicalResult EqCanonicalTrue            = EvaluationSuccess True
+fromEqCanonicalResult EqCanonicalFalse           = EvaluationSuccess False
+fromEqCanonicalResult EqCanonicalUnexpectedInput = EvaluationFailure
+
+instance Semigroup EqCanonicalResult where
+    EqCanonicalTrue <> res2 = res2
+    res1            <> _    = res1
+
+instance Monoid EqCanonicalResult where
+    mempty = EqCanonicalTrue
+
+class EqCanonical term where
+    eqCanonical :: term -> term -> EqCanonicalResult
+
+instance EqCanonical (Term TyName Name uni fun ()) where
+    eqCanonical = undefined

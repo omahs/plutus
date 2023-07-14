@@ -154,6 +154,10 @@ instance ArbitraryBuiltin BLS12_381.Pairing.MlResult where
     -- have direct access to elements of MlResult.
     shrinkBuiltin _ = []
 
+instance ArbitraryBuiltin (Canonical a) where
+    arbitraryBuiltin = error "nope"
+    shrinkBuiltin = error "nope"
+
 -- | For providing an 'Arbitrary' instance deferring to 'ArbitraryBuiltin'. Useful for implementing
 -- 'ArbitraryBuiltin' for a polymorphic built-in type by taking the logic for handling spines from
 -- the 'Arbitrary' class and the logic for handling elements from 'ArbitraryBuiltin'.

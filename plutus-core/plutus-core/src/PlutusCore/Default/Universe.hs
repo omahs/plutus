@@ -114,6 +114,7 @@ data DefaultUni a where
     DefaultUniBLS12_381_G1_Element :: DefaultUni (Esc BLS12_381.G1.Element)
     DefaultUniBLS12_381_G2_Element :: DefaultUni (Esc BLS12_381.G2.Element)
     DefaultUniBLS12_381_MlResult   :: DefaultUni (Esc BLS12_381.Pairing.MlResult)
+    DefaultUniCanonical            :: DefaultUni (Esc Canonical)
 
 -- GHC infers crazy types for these two and the straightforward ones break pattern matching,
 -- so we just leave GHC with its craziness.
@@ -173,6 +174,9 @@ instance GEq DefaultUni where
         geqStep DefaultUniBLS12_381_MlResult a2 = do
             DefaultUniBLS12_381_MlResult <- Just a2
             Just Refl
+        geqStep DefaultUniCanonical a2 = do
+            DefaultUniCanonical <- Just a2
+            Just Refl
         {-# INLINE geqStep #-}
 
         geqRec :: DefaultUni a1 -> DefaultUni a2 -> Maybe (a1 :~: a2)
@@ -198,6 +202,7 @@ instance ToKind DefaultUni where
     toSingKind DefaultUniBLS12_381_G1_Element = knownKind
     toSingKind DefaultUniBLS12_381_G2_Element = knownKind
     toSingKind DefaultUniBLS12_381_MlResult   = knownKind
+    toSingKind DefaultUniCanonical            = knownKind
 
 instance HasUniApply DefaultUni where
     uniApply = DefaultUniApply
@@ -222,6 +227,7 @@ instance PrettyBy RenderContext (DefaultUni a) where
         DefaultUniBLS12_381_G1_Element -> "bls12_381_G1_element"
         DefaultUniBLS12_381_G2_Element -> "bls12_381_G2_element"
         DefaultUniBLS12_381_MlResult   -> "bls12_381_mlresult"
+        DefaultUniCanonical            -> "canonical"
 
 instance PrettyBy RenderContext (SomeTypeIn DefaultUni) where
     prettyBy config (SomeTypeIn uni) = prettyBy config uni
@@ -244,6 +250,7 @@ instance DefaultUni `Contains` Data                       where knownUni = Defau
 instance DefaultUni `Contains` BLS12_381.G1.Element       where knownUni = DefaultUniBLS12_381_G1_Element
 instance DefaultUni `Contains` BLS12_381.G2.Element       where knownUni = DefaultUniBLS12_381_G2_Element
 instance DefaultUni `Contains` BLS12_381.Pairing.MlResult where knownUni = DefaultUniBLS12_381_MlResult
+instance DefaultUni `Contains` Canonical                  where knownUni = DefaultUniCanonical
 
 instance (DefaultUni `Contains` f, DefaultUni `Contains` a) => DefaultUni `Contains` f a where
     knownUni = knownUni `DefaultUniApply` knownUni
@@ -259,6 +266,7 @@ instance KnownBuiltinTypeAst DefaultUni Data                       => KnownTypeA
 instance KnownBuiltinTypeAst DefaultUni BLS12_381.G1.Element       => KnownTypeAst DefaultUni BLS12_381.G1.Element
 instance KnownBuiltinTypeAst DefaultUni BLS12_381.G2.Element       => KnownTypeAst DefaultUni BLS12_381.G2.Element
 instance KnownBuiltinTypeAst DefaultUni BLS12_381.Pairing.MlResult => KnownTypeAst DefaultUni BLS12_381.Pairing.MlResult
+instance KnownBuiltinTypeAst DefaultUni (Canonical a)              => KnownTypeAst DefaultUni (Canonical a)
 
 {- Note [Constraints of ReadKnownIn and MakeKnownIn instances]
 For a monomorphic data type @X@ one only needs to add a @HasConstantIn DefaultUni term@ constraint
@@ -308,6 +316,7 @@ instance (HasConstantIn DefaultUni term, DefaultUni `Contains` (a, b)) =>
 instance HasConstantIn DefaultUni term => MakeKnownIn DefaultUni term BLS12_381.G1.Element
 instance HasConstantIn DefaultUni term => MakeKnownIn DefaultUni term BLS12_381.G2.Element
 instance HasConstantIn DefaultUni term => MakeKnownIn DefaultUni term BLS12_381.Pairing.MlResult
+instance (HasConstantIn DefaultUni term, DefaultUni `Contains` Canonical a) => MakeKnownIn DefaultUni term (Canonical a)
 
 -- See Note [Constraints of ReadKnownIn and MakeKnownIn instances].
 instance HasConstantIn DefaultUni term => ReadKnownIn DefaultUni term Integer
@@ -323,6 +332,7 @@ instance (HasConstantIn DefaultUni term, DefaultUni `Contains` (a, b)) =>
 instance HasConstantIn DefaultUni term => ReadKnownIn DefaultUni term BLS12_381.G1.Element
 instance HasConstantIn DefaultUni term => ReadKnownIn DefaultUni term BLS12_381.G2.Element
 instance HasConstantIn DefaultUni term => ReadKnownIn DefaultUni term BLS12_381.Pairing.MlResult
+instance (HasConstantIn DefaultUni term, DefaultUni `Contains` Canonical a) => ReadKnownIn DefaultUni term (Canonical a)
 
 -- If this tells you an instance is missing, add it right above, following the pattern.
 instance TestTypesFromTheUniverseAreAllKnown DefaultUni
@@ -433,6 +443,7 @@ instance Closed DefaultUni where
         , constr `Permits` BLS12_381.G1.Element
         , constr `Permits` BLS12_381.G2.Element
         , constr `Permits` BLS12_381.Pairing.MlResult
+        , constr `Permits` Canonical
         )
 
     -- See Note [Stable encoding of tags].
@@ -449,6 +460,8 @@ instance Closed DefaultUni where
     encodeUni DefaultUniBLS12_381_G1_Element = [9]
     encodeUni DefaultUniBLS12_381_G2_Element = [10]
     encodeUni DefaultUniBLS12_381_MlResult   = [11]
+    encodeUni DefaultUniCanonical            = [12]
+
     -- See Note [Decoding universes].
     -- See Note [Stable encoding of tags].
     withDecodedUni k = peelUniTag >>= \case
@@ -468,6 +481,7 @@ instance Closed DefaultUni where
         9  -> k DefaultUniBLS12_381_G1_Element
         10 -> k DefaultUniBLS12_381_G2_Element
         11 -> k DefaultUniBLS12_381_MlResult
+        12 -> k DefaultUniCanonical
         _  -> empty
 
     bring
@@ -487,5 +501,5 @@ instance Closed DefaultUni where
     bring _ DefaultUniData r = r
     bring _ DefaultUniBLS12_381_G1_Element r = r
     bring _ DefaultUniBLS12_381_G2_Element r = r
-    bring _ DefaultUniBLS12_381_MlResult  r = r
-
+    bring _ DefaultUniBLS12_381_MlResult r = r
+    bring p (DefaultUniCanonical `DefaultUniApply` uniA) r = bring p uniA r
