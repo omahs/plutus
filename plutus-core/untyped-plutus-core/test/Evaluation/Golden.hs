@@ -25,8 +25,11 @@ import PlutusCore.Evaluation.Machine.ExBudgetingDefaults
 import PlutusCore.Generators.Hedgehog.Interesting
 import PlutusCore.MkPlc
 import PlutusCore.Pretty
+import UntypedPlutusCore qualified as UPLC
+import UntypedPlutusCore.Evaluation.Machine.Bytecode qualified as B
 import UntypedPlutusCore.Evaluation.Machine.Cek
 
+import Control.Exception
 import Data.Bifunctor
 import Data.ByteString.Lazy qualified as BSL
 import Data.Text (Text)
@@ -409,6 +412,14 @@ goldenVsEvaluatedCEK name
     . evaluateCekNoEmit defaultCekParameters
     . eraseTerm
 
+goldenVsEvaluatedBC :: String -> Term TyName Name DefaultUni DefaultFun () -> TestTree
+goldenVsEvaluatedBC name term =
+  case UPLC.deBruijnTerm @FreeVariableError $ eraseTerm term of
+    Left e -> throw e
+    Right t ->
+      let (res, _budget, _logs) = B.evaluateBCTerm B.defaultBCParameters B.restrictingEnormous B.noEmitter $ UPLC.termMapNames UPLC.unNameDeBruijn t
+      in goldenVsPretty ".pbc.golden" name res
+
 runTypecheck
     :: Term TyName Name DefaultUni DefaultFun ()
     -> Either (Error DefaultUni DefaultFun ()) (Normalized (Type TyName DefaultUni ()))
@@ -486,6 +497,7 @@ test_golden = testGroup "golden"
               -- conformance suite and remove them from here once we've done
               -- that.
               , testGroup "CEK" $ fmap (uncurry goldenVsEvaluatedCEK) namesAndTests
+              , testGroup "BC" $ fmap (uncurry goldenVsEvaluatedBC) namesAndTests
               , testGroup "Typechecking" $ fmap (uncurry goldenVsTypechecked) namesAndTests
               , testGroup "Typechecking CK output" $ fmap (uncurry goldenVsTypecheckedEvaluatedCK) namesAndTests
               ]

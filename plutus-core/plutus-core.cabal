@@ -171,6 +171,9 @@ library
     UntypedPlutusCore.Core.Type
     UntypedPlutusCore.Core.Zip
     UntypedPlutusCore.DeBruijn
+    UntypedPlutusCore.Evaluation.Machine.Bytecode
+    UntypedPlutusCore.Evaluation.Machine.Bytecode.Internal
+    UntypedPlutusCore.Evaluation.Machine.Bytecode.Stack
     UntypedPlutusCore.Evaluation.Machine.Cek
     UntypedPlutusCore.Evaluation.Machine.Cek.CekMachineCosts
     UntypedPlutusCore.Evaluation.Machine.Cek.Internal
@@ -312,6 +315,7 @@ library
     , time
     , transformers
     , unordered-containers
+    , vector
     , witherable
 
   if impl(ghc <9.0)

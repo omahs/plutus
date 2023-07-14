@@ -167,3 +167,8 @@ instance RAL.RandomAccessList (RAList a) where
     unsafeIndexZero = unsafeIndexZero
     {-# INLINABLE unsafeIndexOne #-}
     unsafeIndexOne = unsafeIndexOne
+
+instance Foldable RAList where
+    foldMap f l = case uncons l of
+        Just (e, rest) -> f e <> foldMap f rest
+        Nothing        -> mempty

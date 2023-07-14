@@ -260,6 +260,27 @@ benchmark validation
     , plutus-core              ^>=1.9
     , plutus-ledger-api        ^>=1.9
 
+---------------- validation ----------------
+
+benchmark validation-bc
+  import:         lang
+  type:           exitcode-stdio-1.0
+  main-is:        BenchBC.hs
+  hs-source-dirs: validation
+  other-modules:  Common
+  build-depends:
+    , base                     >=4.9     && <5
+    , bytestring
+    , criterion                >=1.5.9.0
+    , deepseq
+    , directory
+    , filepath
+    , flat                     ^>=0.6
+    , optparse-applicative
+    , plutus-benchmark-common
+    , plutus-core              ^>=1.9
+    , plutus-ledger-api        ^>=1.9
+
 ---------------- validation-decode ----------------
 
 benchmark validation-decode

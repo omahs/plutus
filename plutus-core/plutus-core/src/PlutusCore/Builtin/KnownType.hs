@@ -16,6 +16,7 @@
 module PlutusCore.Builtin.KnownType
     ( KnownTypeError
     , throwKnownTypeErrorWithCause
+    , throwKnownTypeError
     , KnownBuiltinTypeIn
     , KnownBuiltinType
     , MakeKnownM (..)
@@ -248,6 +249,13 @@ throwKnownTypeErrorWithCause
 throwKnownTypeErrorWithCause cause = \case
     KnownTypeUnliftingError unlErr -> throwingWithCause _UnliftingError unlErr $ Just cause
     KnownTypeEvaluationFailure     -> throwingWithCause _EvaluationFailure () $ Just cause
+
+throwKnownTypeError
+    :: (MonadError (ErrorWithCause err cause) m, AsUnliftingError err, AsEvaluationFailure err)
+    => KnownTypeError -> m void
+throwKnownTypeError = \case
+    KnownTypeUnliftingError unlErr -> throwingWithCause _UnliftingError unlErr $ Nothing
+    KnownTypeEvaluationFailure     -> throwingWithCause _EvaluationFailure () $ Nothing
 
 typeMismatchError
     :: PrettyParens (SomeTypeIn uni)

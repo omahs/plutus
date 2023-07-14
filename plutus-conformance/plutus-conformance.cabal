@@ -107,6 +107,17 @@ test-suite haskell-steppable-conformance
     , plutus-conformance
     , plutus-core         ^>=1.9
 
+test-suite haskell-bc-conformance
+  import:         lang
+  type:           exitcode-stdio-1.0
+  main-is:        Spec.hs
+  hs-source-dirs: haskell-bc test-cases
+  other-modules:
+  build-depends:
+    , base                >=4.9 && <5
+    , plutus-conformance
+    , plutus-core         ^>=1.9
+
 test-suite agda-conformance
   import:         lang
   type:           exitcode-stdio-1.0

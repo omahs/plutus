@@ -1,0 +1,1 @@
+(Right VClosure [Spend (ExBudget {exBudgetCPU = ExCPU 23000, exBudgetMemory = ExMemory 100}),Lookup {index = 2},Return] (BHead 1 (Leaf (VCon (Some (ValueOf DefaultUniInteger 1)))) Nil))

@@ -1,0 +1,1 @@
+(Right VConstr [ApplyRTL,ApplyRTL,ApplyRTL,Return] 0 [VCon (Some (ValueOf DefaultUniInteger 4)),VCon (Some (ValueOf DefaultUniInteger 2)),VCon (Some (ValueOf DefaultUniInteger 1))])

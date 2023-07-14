@@ -50,9 +50,10 @@ type UplcProg = UPLC.Program Name DefaultUni DefaultFun ()
 
 -- UPLC evaluation test functions
 
--- | The evaluator to be tested. It should either return a program if the evaluation is successful,
--- or `Nothing` if not.
-type UplcEvaluator = UplcProg -> Maybe UplcProg
+-- | The evaluator to be tested. There are two options:
+-- 1. An evaluator that returns a program if the evaluation is successful, or `Nothing` if not.
+-- 2. An evaluator that can only distinguish success or failure.
+data UplcEvaluator = FullEvaluator (UplcProg -> Maybe UplcProg) | BinaryEvaluator (UplcProg -> Bool)
 
 -- | Walk a file tree, making test groups for directories with subdirectories,
 -- and test cases for directories without.
@@ -92,7 +93,7 @@ discoverTests eval expectedFailureFn dir = do
 
 -- | Turn the expected file content in text to a `UplcProg` unless the expected result
 -- is a parse or evaluation error.
-expectedToProg :: T.Text -> Either T.Text UplcProg
+expectedToProg :: T.Text -> Either T.Text (Maybe UplcProg)
 expectedToProg txt
   | txt == shownEvaluationFailure =
     Left txt
@@ -101,15 +102,15 @@ expectedToProg txt
   | otherwise =
     case parseTxt txt of
         Left _  -> Left txt
-        Right p -> Right $ void p
+        Right p -> Right $ Just $ void p
 
 -- | Get the tested value. The tested value is either the shown parse or evaluation error,
 -- or a `UplcProg`.
 getTestedValue ::
     UplcEvaluator
     -> FilePath
-    -> IO (Either T.Text UplcProg)
-getTestedValue eval dir = do
+    -> IO (Either T.Text (Maybe UplcProg))
+getTestedValue evaluator dir = do
     inputFile <- findByExtension [".uplc"] dir
     case inputFile of
         [] -> error $ "Input file missing in " <> dir
@@ -119,15 +120,19 @@ getTestedValue eval dir = do
             case parseTxt input of
                 Left _ -> pure $ Left shownParseError
                 Right p -> do
-                    case eval (void p) of
-                        Nothing   -> pure $ Left shownEvaluationFailure
-                        Just prog -> pure $ Right prog
+                    case evaluator of
+                        FullEvaluator eval -> case eval (void p) of
+                            Nothing   -> pure $ Left shownEvaluationFailure
+                            Just prog -> pure $ Right $ Just prog
+                        BinaryEvaluator eval -> case eval (void p) of
+                            False -> pure $ Left shownEvaluationFailure
+                            True  -> pure $ Right $ Nothing
 
 -- | The comparison function used for the golden test.
 -- This function checks alpha-equivalence of programs when the output is a program.
 compareAlphaEq ::
-    Either T.Text UplcProg -- ^ golden value
-    -> Either T.Text UplcProg -- ^ tested value
+    Either T.Text (Maybe UplcProg) -- ^ golden value
+    -> Either T.Text (Maybe UplcProg) -- ^ tested value
     -> Maybe String
     -- ^ If two values are the same, it returns `Nothing`.
     -- If they are different, it returns an error that will be printed to the user.
@@ -137,7 +142,11 @@ compareAlphaEq (Left expectedTxt) (Left actualTxt) =
     else Just $
         "Test failed, the output failed to parse or evaluate: \n"
         <> T.unpack actualTxt
-compareAlphaEq (Right expected) (Right actual) =
+compareAlphaEq (Right (Just _)) (Right Nothing) =
+    -- Evaluator just said "success"
+    Nothing
+compareAlphaEq (Right Nothing) _ = error "Golden program should never be missing"
+compareAlphaEq (Right (Just expected)) (Right (Just actual)) =
     if actual == expected
     then Nothing
     else Just $
@@ -170,13 +179,15 @@ compareAlphaEq (Left txt) (Right actual) =
 -- | Update the golden file with the tested value. TODO abstract out for other tests.
 updateGoldenFile ::
     FilePath -- ^ the path to write the golden file to
-    -> Either T.Text UplcProg -> IO ()
+    -> Either T.Text (Maybe UplcProg) -> IO ()
 updateGoldenFile goldenPath (Left txt) = T.writeFile goldenPath txt
-updateGoldenFile goldenPath (Right p)  = T.writeFile goldenPath (display p)
+updateGoldenFile goldenPath (Right (Just p)) = T.writeFile goldenPath (display p)
+updateGoldenFile _ (Right Nothing) =
+    error "Can't update golden file if evaluator does not produce programs"
 
 -- | Our `evaluator` for the Haskell UPLC tests is the CEK machine.
 evalUplcProg :: UplcEvaluator
-evalUplcProg = traverseOf UPLC.progTerm eval
+evalUplcProg = FullEvaluator (traverseOf UPLC.progTerm eval)
   where
     eval t = do
         -- runCek-like functions (e.g. evaluateCekNoEmit) are partial on term's with free variables,
