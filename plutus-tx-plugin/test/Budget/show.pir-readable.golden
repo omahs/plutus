@@ -34,9 +34,6 @@ letrec
             (\(x : a) (xs : List a) -> /\dead -> f x (foldr {a} {b} f acc xs))
             {all dead. dead}
 in
-let
-  !id : all a. a -> a = /\a -> \(x : a) -> x
-in
 letrec
   !`$w$cshowsPrec` :
      integer -> List string -> List string
@@ -159,7 +156,7 @@ letrec
                             {all dead. dead})
                        {all dead. dead})
                     (acc x))
-               (id {List string})
+               (\(x : List string) -> x)
                (go (Nil {integer}) w))
           {all dead. dead}
 in
@@ -390,7 +387,7 @@ let
                  in
                  \(acc : List string -> List string) (x : List string) ->
                    toHex (divideInteger x 16) (toHex (modInteger x 16) (acc x)))
-              (id {List string})
+              (\(x : List string) -> x)
               (`$fEnumBool_$cenumFromTo`
                  0
                  (subtractInteger (lengthOfByteString w) 1))
@@ -440,7 +437,7 @@ let
                             (acc : List string -> List string)
                             (x : List string) ->
                              Cons {string} "," (showElem a (acc x)))
-                          (id {List string})
+                          (\(x : List string) -> x)
                           xs
                           (Cons {string} "]" x)))))
              (Nil {string})))
