@@ -93,6 +93,7 @@ applyAndBetaReduce rhs args0 = do
         (LamAbs{}, TypeAppContext{}) -> pure Nothing
         (TyAbs{}, TermAppContext{}) -> pure Nothing
         -- no more lambda abstraction, just return the processed application
+        (Apply{}, appCtx) -> error "pure . Just $ fillAppContext acc appCtx"
         (_, appCtx) -> pure . Just $ fillAppContext acc appCtx
 
       -- Is it safe to turn `(\a -> body) arg` into `body [a := arg]`?
