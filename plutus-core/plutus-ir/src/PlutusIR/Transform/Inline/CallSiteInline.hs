@@ -77,8 +77,17 @@ applyAndBetaReduce rhs args0 = do
           safe <- safeToBetaReduce n arg acc
           if safe -- we only do substitution if it is safe to beta reduce
             then error $
-              show (unsafeCoerce args::AppContext TyName Name PLC.DefaultUni PLC.DefaultFun ())
+              " arg0 "
+              <> show (unsafeCoerce args0::AppContext TyName Name PLC.DefaultUni PLC.DefaultFun ())
+              <> " args' "
+              <> show (unsafeCoerce args'::AppContext TyName Name PLC.DefaultUni PLC.DefaultFun ())
+              <> " args "
+              <> show (unsafeCoerce args::AppContext TyName Name PLC.DefaultUni PLC.DefaultFun ())
+              <> " acc "
               <> show (unsafeCoerce acc::Term TyName Name PLC.DefaultUni PLC.DefaultFun ())
+              <> " tm " <> show (unsafeCoerce tm::Term TyName Name PLC.DefaultUni PLC.DefaultFun ())
+              <> " rhs/n "
+              <> show (unsafeCoerce rhs::Term TyName Name PLC.DefaultUni PLC.DefaultFun ())
 
 
             -- then do
@@ -126,30 +135,35 @@ inlineApp ::
   Term tyname name uni fun ann ->
   InlineM tyname name uni fun ann (Term tyname name uni fun ann)
 inlineApp t
-  | (Var _ann name, args) <- splitApplication t =
-      gets (lookupVarInfo name) >>= \case
-        Just varInfo -> do
-          -- rename the rhs of the variable before any substitution
-          rhs <- liftDupable (let Done rhs = varRhs varInfo in rhs)
-          applyAndBetaReduce rhs args >>= \case
-            Just applied -> do -- there is beta reduction of the application
-              let -- Inline only if the size is no bigger than not inlining.
-                  sizeIsOk = termSize applied <= termSize t
-                  -- The definition itself will be inlined, so we need to check that the cost
-                  -- of that is acceptable. Note that we do _not_ check the cost of the _body_.
-                  -- We would have paid that regardless.
-                  -- Consider e.g. `let y = \x. f x`. We pay the cost of the `f x` at
-                  -- every call site regardless. The work that is being duplicated is
-                  -- the work for the lambda.
-                  costIsOk = costIsAcceptable rhs
-              -- check if binding is pure to avoid duplicated effects.
-              -- For strict bindings we can't accidentally make any effects happen less often
-              -- than it would have before, but we can make it happen more often.
-              -- We could potentially do this safely in non-conservative mode.
-              rhsPure <- isTermBindingPure (varStrictness varInfo) rhs
-              pure $ if sizeIsOk && costIsOk && rhsPure then applied else t
-            Nothing -> pure t
-        -- The variable maybe a *recursive* let binding, in which case it won't be in the map,
-        -- and we don't process it. ATM recursive bindings aren't inlined.
-        Nothing -> pure t
+  | (var@(Var _ann name), args) <- splitApplication t =
+    error $
+      " tm " <> show (unsafeCoerce t::Term TyName Name PLC.DefaultUni PLC.DefaultFun ())
+      <> " var " <> show (unsafeCoerce var::Term TyName Name PLC.DefaultUni PLC.DefaultFun ())
+      <> " args "
+      <> show (unsafeCoerce args::AppContext TyName Name PLC.DefaultUni PLC.DefaultFun ())
+      -- gets (lookupVarInfo name) >>= \case
+      --   Just varInfo -> do
+      --     -- rename the rhs of the variable before any substitution
+      --     rhs <- liftDupable (let Done rhs = varRhs varInfo in rhs)
+      --     applyAndBetaReduce rhs args >>= \case
+      --       Just applied -> do -- there is beta reduction of the application
+      --         let -- Inline only if the size is no bigger than not inlining.
+      --             sizeIsOk = termSize applied <= termSize t
+      --             -- The definition itself will be inlined, so we need to check that the cost
+      --             -- of that is acceptable. Note that we do _not_ check the cost of the _body_.
+      --             -- We would have paid that regardless.
+      --             -- Consider e.g. `let y = \x. f x`. We pay the cost of the `f x` at
+      --             -- every call site regardless. The work that is being duplicated is
+      --             -- the work for the lambda.
+      --             costIsOk = costIsAcceptable rhs
+      --         -- check if binding is pure to avoid duplicated effects.
+      --         -- For strict bindings we can't accidentally make any effects happen less often
+      --         -- than it would have before, but we can make it happen more often.
+      --         -- We could potentially do this safely in non-conservative mode.
+      --         rhsPure <- isTermBindingPure (varStrictness varInfo) rhs
+      --         pure $ if sizeIsOk && costIsOk && rhsPure then applied else t
+      --       Nothing -> pure t
+      --   -- The variable maybe a *recursive* let binding, in which case it won't be in the map,
+      --   -- and we don't process it. ATM recursive bindings aren't inlined.
+      --   Nothing -> pure t
   | otherwise = pure t
