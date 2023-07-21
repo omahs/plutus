@@ -72,7 +72,7 @@ applyAndBetaReduce rhs args0 = do
         AppContext tyname name uni fun ann ->
         InlineM tyname name uni fun ann (Maybe (Term tyname name uni fun ann))
       go acc args = case (acc, args) of
-        (LamAbs _ann n _ty tm, TermAppContext arg _ args') -> do
+        (LamAbs _ann n _ty tm, appCtx@(TermAppContext arg _ args')) -> do
           safe <- safeToBetaReduce n arg acc
           if safe -- we only do substitution if it is safe to beta reduce
             then do
@@ -82,7 +82,8 @@ applyAndBetaReduce rhs args0 = do
                   (\tmName -> if tmName == n then Just <$> PLC.rename arg else pure Nothing)
                   tm -- drop the beta reduced term lambda
               go acc' args'
-            else pure Nothing
+            -- if it isn't safe, don't beta reduce, just return the processed application
+            else pure . Just $ fillAppContext acc appCtx--error "else case"--pure
         (TyAbs _ann n _kd tm, TypeAppContext arg _ args') -> do
           acc' <-
             termSubstTyNamesM -- substitute the type param with the arg
@@ -90,12 +91,13 @@ applyAndBetaReduce rhs args0 = do
               tm -- drop the beta reduced type lambda
           go acc' args'
         -- term/type argument mismatch, don't inline
-        (LamAbs{}, TypeAppContext{}) -> pure Nothing
-        (TyAbs{}, TermAppContext{}) -> pure Nothing
+        (LamAbs{}, TypeAppContext{}) -> error "lamAbs, type"--pure Nothing
+        (TyAbs{}, TermAppContext{}) -> error "tyabs term" --pure Nothing
         -- no more lambda abstraction, just return the processed application
-        (Apply{}, appCtx) -> error "pure . Just $ fillAppContext acc appCtx"
         (_, appCtx) -> pure . Just $ fillAppContext acc appCtx
-
+        -- (acc, TypeAppContext{}) -> error "type"  -- pure . Just $ fillAppContext acc appCtx
+        -- (acc, TermAppContext{}) -> error "term"
+        -- (acc, AppContextEnd) -> error "end"
       -- Is it safe to turn `(\a -> body) arg` into `body [a := arg]`?
       -- The criteria is the same as the criteria for inlining `a` in
       -- `let !a = arg in body`.
