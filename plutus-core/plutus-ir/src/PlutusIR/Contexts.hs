@@ -13,6 +13,7 @@ data AppContext tyname name uni fun ann =
   TermAppContext (Term tyname name uni fun ann) ann (AppContext tyname name uni fun ann)
   | TypeAppContext (Type tyname uni ann) ann (AppContext tyname name uni fun ann)
   | AppContextEnd
+  deriving stock Show
 
 {- | Takes a term and views it as a head plus an 'AppContext', e.g.
 

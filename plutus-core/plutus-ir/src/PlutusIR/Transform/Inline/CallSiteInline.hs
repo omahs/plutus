@@ -19,6 +19,7 @@ import PlutusIR.Transform.Inline.Utils
 import PlutusIR.Transform.Substitute
 
 import Control.Monad.State (gets)
+import Unsafe.Coerce (unsafeCoerce)
 
 {- Note [Inlining and beta reduction of fully applied functions]
 
@@ -75,13 +76,18 @@ applyAndBetaReduce rhs args0 = do
         (LamAbs _ann n _ty tm, appCtx@(TermAppContext arg _ args')) -> do
           safe <- safeToBetaReduce n arg acc
           if safe -- we only do substitution if it is safe to beta reduce
-            then do
-              acc' <- do
-                termSubstNamesM -- substitute the term param with the arg in the function body
-                  -- rename before substitution to ensure global uniqueness
-                  (\tmName -> if tmName == n then Just <$> PLC.rename arg else pure Nothing)
-                  tm -- drop the beta reduced term lambda
-              go acc' args'
+            then error $
+              show (unsafeCoerce args::AppContext TyName Name PLC.DefaultUni PLC.DefaultFun ())
+              <> show (unsafeCoerce acc::Term TyName Name PLC.DefaultUni PLC.DefaultFun ())
+
+
+            -- then do
+            --   acc' <- do
+            --     termSubstNamesM -- substitute the term param with the arg in the function body
+            --       -- rename before substitution to ensure global uniqueness
+            --       (\tmName -> if tmName == n then Just <$> PLC.rename arg else pure Nothing)
+            --       tm -- drop the beta reduced term lambda
+            --   go acc' args'
             -- if it isn't safe, don't beta reduce, just return the processed application
             else pure . Just $ fillAppContext acc appCtx--error "else case"--pure
         (TyAbs _ann n _kd tm, TypeAppContext arg _ args') -> do
@@ -94,10 +100,11 @@ applyAndBetaReduce rhs args0 = do
         (LamAbs{}, TypeAppContext{}) -> error "lamAbs, type"--pure Nothing
         (TyAbs{}, TermAppContext{}) -> error "tyabs term" --pure Nothing
         -- no more lambda abstraction, just return the processed application
-        (_, appCtx) -> pure . Just $ fillAppContext acc appCtx
-        -- (acc, TypeAppContext{}) -> error "type"  -- pure . Just $ fillAppContext acc appCtx
-        -- (acc, TermAppContext{}) -> error "term"
-        -- (acc, AppContextEnd) -> error "end"
+        -- (, appCtx) -> pure . Just $ fillAppContext acc appCtx
+        (acc, TypeAppContext{}) -> error "type"  -- pure . Just $ fillAppContext acc appCtx
+        (acc, TermAppContext{}) -> error "term"
+        (acc, AppContextEnd) -> error $
+          show (unsafeCoerce acc::Term TyName Name PLC.DefaultUni PLC.DefaultFun ())<> "end"
       -- Is it safe to turn `(\a -> body) arg` into `body [a := arg]`?
       -- The criteria is the same as the criteria for inlining `a` in
       -- `let !a = arg in body`.
