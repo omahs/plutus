@@ -34,6 +34,7 @@ import Control.Monad.State (evalStateT, modify')
 import Algebra.Graph qualified as G
 import Data.Map qualified as Map
 import PlutusIR.Transform.Inline.CallSiteInline (inlineApp)
+import Unsafe.Coerce (unsafeCoerce)
 import Witherable (Witherable (wither))
 
 {- Note [Inlining approach and 'Secrets of the GHC Inliner']
@@ -212,7 +213,8 @@ processTerm = handleTerm <=< traverseOf termSubtypes applyTypeSubstitution where
             -- actually have got rid of all of them!
             pure $ mkLet ann NonRec bs' t'
         -- This includes recursive let terms, we don't even consider inlining them at the moment
-        t ->
+        t -> error $
+            " tm t" <> show (unsafeCoerce t::Term TyName Name PLC.DefaultUni PLC.DefaultFun ())
             -- process all subterms first, so that the rhs won't be processed more than once. This
             -- is important because otherwise the number of times we process them can grow
             -- exponentially in the case that it has nested `let`s.
@@ -222,7 +224,7 @@ processTerm = handleTerm <=< traverseOf termSubtypes applyTypeSubstitution where
             -- subterm, the runtime is quadratic for terms with a long chain of applications.
             -- If we use the context-based approach like in GHC, this won't be a problem, so we may
             -- consider that in the future.
-            inlineApp =<< forMOf termSubterms t processTerm
+            -- inlineApp =<< forMOf termSubterms t processTerm
 
 -- | Run the inliner on a single non-recursive let binding.
 processSingleBinding
