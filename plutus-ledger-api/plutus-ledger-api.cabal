@@ -134,7 +134,8 @@ test-suite plutus-ledger-api-test
     Spec.Eval
     Spec.Interval
     Spec.NoThunks
-    Spec.Versions
+    Spec.Phase1
+    --Spec.Phase2
 
   build-depends:
     , base                                                              >=4.9 && <5

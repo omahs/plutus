@@ -18,7 +18,6 @@ import UntypedPlutusCore as UPLC
 
 import Control.Monad.Except
 import Data.ByteString qualified as BS
-import Data.ByteString.Short qualified as BSS
 import Data.Foldable (for_)
 import Data.Map qualified as Map
 import Data.Set qualified as Set
@@ -31,7 +30,6 @@ tests = testGroup "versions"
     [ testLedgerLanguages
     , testBuiltinVersions
     , testLanguageVersions
-    , testRmdr
     ]
 
 testLedgerLanguages :: TestTree
@@ -86,22 +84,6 @@ testBuiltinVersions = testGroup "builtins"
              assertBool "not in l3,future" $ isRight $ V3.assertScriptWellFormed futurePV script
     ]
 
-testRmdr :: TestTree
-testRmdr = testGroup "rmdr"
-    [ testCase "remdr" $ do
-         assertBool "remdr1" $ isRight $ V1.assertScriptWellFormed valentinePV $ errorScript <> "remdr1"
-         assertBool "remdr2" $ isRight $ V2.assertScriptWellFormed valentinePV $ errorScript <> "remdr2"
-         assertBool "remdr1c" $ isRight $ V1.assertScriptWellFormed conwayPV $ errorScript <> "remdr1"
-         assertBool "remdr2c" $ isRight $ V2.assertScriptWellFormed conwayPV $ errorScript <> "remdr2"
-         assertEqual "remdr3" (Left $ RemainderError "remdr3") $ V3.assertScriptWellFormed conwayPV $ errorScript <> "remdr3"
-    , testProperty "remdr1gen"$ \remdr -> isRight $ V1.assertScriptWellFormed valentinePV $ errorScript <> BSS.pack remdr
-    , testProperty "remdr2gen"$ \remdr -> isRight $ V2.assertScriptWellFormed valentinePV $ errorScript <> BSS.pack remdr
-    , testProperty "remdr1genc"$ \remdr -> isRight $ V1.assertScriptWellFormed conwayPV $ errorScript <> BSS.pack remdr
-    , testProperty "remdr2genc"$ \remdr -> isRight $ V2.assertScriptWellFormed conwayPV $ errorScript <> BSS.pack remdr
-    -- we cannot make the same property as above for remdr3gen because it may generate valid bytestring append extensions to the original script
-    -- a more sophisticated one could work though
-    ]
-
 -- See Note [Checking the Plutus Core language version] for why these have to use mkTermToEvaluate
 testLanguageVersions :: TestTree
 testLanguageVersions = testGroup "Plutus Core language versions"
@@ -118,9 +100,6 @@ testLanguageVersions = testGroup "Plutus Core language versions"
 serialiseDataExScript :: SerialisedScript
 serialiseDataExScript = serialiseUPLC $ UPLC.Program () PLC.plcVersion100 $
     UPLC.Apply () (UPLC.Builtin () PLC.SerialiseData) (PLC.mkConstant () $ I 1)
-
-errorScript :: SerialisedScript
-errorScript = serialiseUPLC $ UPLC.Program () PLC.plcVersion100 $ UPLC.Error ()
 
 v110script :: SerialisedScript
 v110script = serialiseUPLC $ UPLC.Program () PLC.plcVersion110 $ UPLC.Constr () 0 []

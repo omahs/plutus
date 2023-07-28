@@ -9,7 +9,7 @@ import Spec.CostModelParams qualified
 import Spec.Eval qualified
 import Spec.Interval qualified
 import Spec.NoThunks qualified
-import Spec.Versions qualified
+import Spec.Phase1 qualified
 
 import Test.Tasty
 import Test.Tasty.HUnit
@@ -93,7 +93,7 @@ tests = testGroup "plutus-ledger-api" [
     ]
     , Spec.Interval.tests
     , Spec.Eval.tests
-    , Spec.Versions.tests
+    , Spec.Phase1.tests
     , Spec.CostModelParams.tests
     , Spec.NoThunks.tests
     ]

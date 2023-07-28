@@ -126,6 +126,7 @@ import GHC.Natural (Natural)
 import Prettyprinter
 import Text.PrettyBy.Default
 import Text.PrettyBy.Internal
+import Text.Printf qualified
 
 infixr 2 ?
 infixl 4 <<$>>, <<*>>
@@ -151,6 +152,11 @@ instance (PrettyBy config a, PrettyBy config b) => DefaultPrettyBy config (Eithe
 -- | An instance extending the set of types supporting default pretty-printing with 'Either'.
 deriving via PrettyCommon (Either a b)
     instance PrettyDefaultBy config (Either a b) => PrettyBy config (Either a b)
+
+-- orphan for allowing the user of prettyprinter together with Text.Printf
+-- see: https://github.com/quchen/prettyprinter/issues/33
+instance Text.Printf.PrintfArg (Doc ann) where
+    formatArg  = Text.Printf.formatString . show
 
 -- | Coerce the second argument to the result type of the first one. The motivation for this
 -- function is that it's often more annoying to explicitly specify a target type for 'coerce' than
