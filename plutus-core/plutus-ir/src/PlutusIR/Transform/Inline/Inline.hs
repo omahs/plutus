@@ -213,8 +213,11 @@ processTerm = handleTerm <=< traverseOf termSubtypes applyTypeSubstitution where
             -- actually have got rid of all of them!
             pure $ mkLet ann NonRec bs' t'
         -- This includes recursive let terms, we don't even consider inlining them at the moment
-        t -> error $
-            " tm t" <> show (unsafeCoerce t::Term TyName Name PLC.DefaultUni PLC.DefaultFun ())
+        t -> do
+            t' <- inlineApp t
+            forMOf termSubterms t' processTerm
+            -- error $
+        --     " tm t" <> show (unsafeCoerce t::Term TyName Name PLC.DefaultUni PLC.DefaultFun ())
             -- process all subterms first, so that the rhs won't be processed more than once. This
             -- is important because otherwise the number of times we process them can grow
             -- exponentially in the case that it has nested `let`s.

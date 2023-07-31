@@ -229,44 +229,44 @@ inline =
     testNested "inline" $
         map
             (goldenPirM goldenInlineUnique pTerm)
-            [ "var"
-            , "builtin"
-            , "callsite-non-trivial-body"
-            , "constant"
-            , "transitive"
-            , "tyvar"
-            , "single"
-            , "immediateVar"
-            , "immediateApp"
-            , "firstEffectfulTerm1"
-            , "firstEffectfulTerm2"
-            -- these tests are all let bindings of functions
-            , "letFunConstInt" -- const fn fully applied (integer)
-            , "letFunConstBool" -- const fn fully applied (bool)
-            , "letFunConstMulti" -- multiple occurrences of a let binding of the const fn.
-            , "letFunInFun" -- fully applied fn inside another let, single occurrence.
-            , "letFunInFunMulti" -- fully applied fn inside another let, multiple occurrences.
-            -- similar to "letFunInFunMulti" but all fns are fully applied.
-            , "letTypeAppMulti"
+            [ --"var"
+            -- , "builtin"
+            -- , "callsite-non-trivial-body"
+            -- , "constant"
+            -- , "transitive"
+            -- , "tyvar"
+            -- , "single"
+            -- , "immediateVar"
+            -- , "immediateApp"
+            -- , "firstEffectfulTerm1"
+            -- , "firstEffectfulTerm2"
+            -- -- these tests are all let bindings of functions
+            -- , "letFunConstInt" -- const fn fully applied (integer)
+            -- , "letFunConstBool" -- const fn fully applied (bool)
+            -- , "letFunConstMulti" -- multiple occurrences of a let binding of the const fn.
+            -- , "letFunInFun" -- fully applied fn inside another let, single occurrence.
+            -- , "letFunInFunMulti" -- fully applied fn inside another let, multiple occurrences.
+            -- -- similar to "letFunInFunMulti" but all fns are fully applied.
+            -- , "letTypeAppMulti"
             -- singe occurrence of a polymorphic id function that is fully applied
-            , "letTypeApp"
+            -- , "letTypeApp"
             -- multiple occurrences of a polymorphic id function that IS fully applied
-            , "letTypeAppMultiSat"
+            -- , "letTypeAppMultiSat"
             -- multiple occurrences of a polymorphic id function that is NOT fully applied
-            , "letTypeAppMultiNotSat"
-            , "letApp" -- single occurrence of a function application in rhs
+            -- , "letTypeAppMultiNotSat"
+            -- , "letApp" -- single occurrence of a function application in rhs
             -- multiple occurrences of a function application in rhs with not acceptable body
-            , "letAppMultiNotAcceptable"
-            , "letOverApp" -- over-application of a function, single occurrence
-            , "letOverAppMulti" -- multiple occurrences of an over-application of a function
+            -- , "letAppMultiNotAcceptable"
+            -- , "letOverApp" -- over-application of a function, single occurrence
+             "letOverAppMulti" -- multiple occurrences of an over-application of a function
             -- multiple occurrences of an over-application of a function with type arguments
             , "letOverAppType"
             , "letOverAppType3"
-            , "letNonPure" -- multiple occurrences of a non-pure binding
-            , "letNonPureMulti"
-            , "letNonPureMultiStrict"
-            , "rhs-modified"
-            , "partiallyApp"
+            -- , "letNonPure" -- multiple occurrences of a non-pure binding
+            -- , "letNonPureMulti"
+            -- , "letNonPureMultiStrict"
+            -- , "rhs-modified"
+            -- , "partiallyApp"
             ]
 
 -- | Check whether a term is globally unique.

@@ -1,3 +1,4 @@
+-- editorconfig-checker-disable-file
 {-# LANGUAGE ConstraintKinds  #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs            #-}
@@ -19,6 +20,7 @@ import PlutusIR.Transform.Inline.Utils
 import PlutusIR.Transform.Substitute
 
 import Control.Monad.State (gets)
+import Debug.Trace
 import Unsafe.Coerce (unsafeCoerce)
 
 {- Note [Inlining and beta reduction of fully applied functions]
@@ -74,37 +76,66 @@ applyAndBetaReduce rhs args0 = do
         InlineM tyname name uni fun ann (Maybe (Term tyname name uni fun ann))
       go acc args = case (acc, args) of
         (LamAbs _ann n _ty tm, appCtx@(TermAppContext arg _ args')) -> do
-          safe <- safeToBetaReduce n arg acc
-          if safe -- we only do substitution if it is safe to beta reduce
-            then error $
-              " arg0 "
-              <> show (unsafeCoerce args0::AppContext TyName Name PLC.DefaultUni PLC.DefaultFun ())
-              <> " args' "
+          safe <-
+            trace
+              ("\n name \n " <> show (unsafeCoerce n::Name)
+              <> " arg \n "
               <> show (unsafeCoerce args'::AppContext TyName Name PLC.DefaultUni PLC.DefaultFun ())
-              <> " args "
-              <> show (unsafeCoerce args::AppContext TyName Name PLC.DefaultUni PLC.DefaultFun ())
-              <> " acc "
-              <> show (unsafeCoerce acc::Term TyName Name PLC.DefaultUni PLC.DefaultFun ())
-              <> " tm " <> show (unsafeCoerce tm::Term TyName Name PLC.DefaultUni PLC.DefaultFun ())
-              <> " rhs/n "
-              <> show (unsafeCoerce rhs::Term TyName Name PLC.DefaultUni PLC.DefaultFun ())
-
-
-            -- then do
-            --   acc' <- do
-            --     termSubstNamesM -- substitute the term param with the arg in the function body
-            --       -- rename before substitution to ensure global uniqueness
-            --       (\tmName -> if tmName == n then Just <$> PLC.rename arg else pure Nothing)
-            --       tm -- drop the beta reduced term lambda
-            --   go acc' args'
-            -- if it isn't safe, don't beta reduce, just return the processed application
-            else pure . Just $ fillAppContext acc appCtx--error "else case"--pure
+              <>  "acc \n "
+              <> show (unsafeCoerce acc::AppContext TyName Name PLC.DefaultUni PLC.DefaultFun ()))
+              (safeToBetaReduce n arg acc)
+          if safe -- we only do substitution if it is safe to beta reduce
+            then do
+              acc' <- do
+                termSubstNamesM -- substitute the term param with the arg in the function body
+                  -- rename before substitution to ensure global uniqueness
+                  (\tmName -> if tmName == n then Just <$> PLC.rename arg else pure Nothing)
+                  tm -- drop the beta reduced term lambda
+              trace
+                ( "LamAbs & TermAppContext, safe and subtituted arg \n"
+                  <>" arg0 \n"
+                  <> show (unsafeCoerce args0::AppContext TyName Name PLC.DefaultUni PLC.DefaultFun ())
+                  <> " args' \n"
+                  <> show (unsafeCoerce args'::AppContext TyName Name PLC.DefaultUni PLC.DefaultFun ())
+                  <> " args \n"
+                  <> show (unsafeCoerce args::AppContext TyName Name PLC.DefaultUni PLC.DefaultFun ())
+                  <> " acc \n"
+                  <> show (unsafeCoerce acc::Term TyName Name PLC.DefaultUni PLC.DefaultFun ())
+                  <> " tm \n" <> show (unsafeCoerce tm::Term TyName Name PLC.DefaultUni PLC.DefaultFun ())
+                  <> " rhs \n "
+                  <> show (unsafeCoerce rhs::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()))
+                (go acc' args')
+            else pure . Just $ trace
+                ( "LamAbs & TermAppContext, unsafe" <> " arg0 \n"
+                  <> show (unsafeCoerce args0::AppContext TyName Name PLC.DefaultUni PLC.DefaultFun ())
+                  <> " args' \n"
+                  <> show (unsafeCoerce args'::AppContext TyName Name PLC.DefaultUni PLC.DefaultFun ())
+                  <> " args \n"
+                  <> show (unsafeCoerce args::AppContext TyName Name PLC.DefaultUni PLC.DefaultFun ())
+                  <> " acc \n"
+                  <> show (unsafeCoerce acc::Term TyName Name PLC.DefaultUni PLC.DefaultFun ())
+                  <> " tm \n" <> show (unsafeCoerce tm::Term TyName Name PLC.DefaultUni PLC.DefaultFun ())
+                  <> " rhs \n "
+                  <> show (unsafeCoerce rhs::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()))
+                  (fillAppContext acc appCtx)
         (TyAbs _ann n _kd tm, TypeAppContext arg _ args') -> do
           acc' <-
             termSubstTyNamesM -- substitute the type param with the arg
               (\tyName -> if tyName == n then Just <$> PLC.rename arg else pure Nothing)
               tm -- drop the beta reduced type lambda
-          go acc' args'
+          trace
+            (  "TyAbs & TypeAppContext, substituted \n" <> " arg0 \n"
+              <> show (unsafeCoerce args0::AppContext TyName Name PLC.DefaultUni PLC.DefaultFun ())
+              <> " args' \n"
+              <> show (unsafeCoerce args'::AppContext TyName Name PLC.DefaultUni PLC.DefaultFun ())
+              <> " args \n"
+              <> show (unsafeCoerce args::AppContext TyName Name PLC.DefaultUni PLC.DefaultFun ())
+              <> " acc \n"
+              <> show (unsafeCoerce acc::Term TyName Name PLC.DefaultUni PLC.DefaultFun ())
+              <> " tm \n" <> show (unsafeCoerce tm::Term TyName Name PLC.DefaultUni PLC.DefaultFun ())
+              <> " rhs \n "
+              <> show (unsafeCoerce rhs::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()))
+            (go acc' args')
         -- term/type argument mismatch, don't inline
         (LamAbs{}, TypeAppContext{}) -> error "lamAbs, type"--pure Nothing
         (TyAbs{}, TermAppContext{}) -> error "tyabs term" --pure Nothing
@@ -112,8 +143,8 @@ applyAndBetaReduce rhs args0 = do
         -- (, appCtx) -> pure . Just $ fillAppContext acc appCtx
         (acc, TypeAppContext{}) -> error "type"  -- pure . Just $ fillAppContext acc appCtx
         (acc, TermAppContext{}) -> error "term"
-        (acc, AppContextEnd) -> error $
-          show (unsafeCoerce acc::Term TyName Name PLC.DefaultUni PLC.DefaultFun ())<> "end"
+        (acc, AppContextEnd) -> pure $ Just acc
+          -- show (unsafeCoerce acc::Term TyName Name PLC.DefaultUni PLC.DefaultFun ())<> "end"
       -- Is it safe to turn `(\a -> body) arg` into `body [a := arg]`?
       -- The criteria is the same as the criteria for inlining `a` in
       -- `let !a = arg in body`.
@@ -136,34 +167,34 @@ inlineApp ::
   InlineM tyname name uni fun ann (Term tyname name uni fun ann)
 inlineApp t
   | (var@(Var _ann name), args) <- splitApplication t =
-    error $
-      " tm " <> show (unsafeCoerce t::Term TyName Name PLC.DefaultUni PLC.DefaultFun ())
-      <> " var " <> show (unsafeCoerce var::Term TyName Name PLC.DefaultUni PLC.DefaultFun ())
-      <> " args "
-      <> show (unsafeCoerce args::AppContext TyName Name PLC.DefaultUni PLC.DefaultFun ())
-      -- gets (lookupVarInfo name) >>= \case
-      --   Just varInfo -> do
-      --     -- rename the rhs of the variable before any substitution
-      --     rhs <- liftDupable (let Done rhs = varRhs varInfo in rhs)
-      --     applyAndBetaReduce rhs args >>= \case
-      --       Just applied -> do -- there is beta reduction of the application
-      --         let -- Inline only if the size is no bigger than not inlining.
-      --             sizeIsOk = termSize applied <= termSize t
-      --             -- The definition itself will be inlined, so we need to check that the cost
-      --             -- of that is acceptable. Note that we do _not_ check the cost of the _body_.
-      --             -- We would have paid that regardless.
-      --             -- Consider e.g. `let y = \x. f x`. We pay the cost of the `f x` at
-      --             -- every call site regardless. The work that is being duplicated is
-      --             -- the work for the lambda.
-      --             costIsOk = costIsAcceptable rhs
-      --         -- check if binding is pure to avoid duplicated effects.
-      --         -- For strict bindings we can't accidentally make any effects happen less often
-      --         -- than it would have before, but we can make it happen more often.
-      --         -- We could potentially do this safely in non-conservative mode.
-      --         rhsPure <- isTermBindingPure (varStrictness varInfo) rhs
-      --         pure $ if sizeIsOk && costIsOk && rhsPure then applied else t
-      --       Nothing -> pure t
-      --   -- The variable maybe a *recursive* let binding, in which case it won't be in the map,
-      --   -- and we don't process it. ATM recursive bindings aren't inlined.
-      --   Nothing -> pure t
+    -- error $
+    --   " tm " <> show (unsafeCoerce t::Term TyName Name PLC.DefaultUni PLC.DefaultFun ())
+    --   <> " var " <> show (unsafeCoerce var::Term TyName Name PLC.DefaultUni PLC.DefaultFun ())
+    --   <> " args "
+    --   <> show (unsafeCoerce args::AppContext TyName Name PLC.DefaultUni PLC.DefaultFun ())
+      gets (lookupVarInfo name) >>= \case
+        Just varInfo -> do
+          -- rename the rhs of the variable before any substitution
+          rhs <- liftDupable (let Done rhs = varRhs varInfo in rhs)
+          applyAndBetaReduce rhs args >>= \case
+            Just applied -> do -- there is beta reduction of the application
+              let -- Inline only if the size is no bigger than not inlining.
+                  sizeIsOk = termSize applied <= termSize t
+                  -- The definition itself will be inlined, so we need to check that the cost
+                  -- of that is acceptable. Note that we do _not_ check the cost of the _body_.
+                  -- We would have paid that regardless.
+                  -- Consider e.g. `let y = \x. f x`. We pay the cost of the `f x` at
+                  -- every call site regardless. The work that is being duplicated is
+                  -- the work for the lambda.
+                  costIsOk = costIsAcceptable rhs
+              -- check if binding is pure to avoid duplicated effects.
+              -- For strict bindings we can't accidentally make any effects happen less often
+              -- than it would have before, but we can make it happen more often.
+              -- We could potentially do this safely in non-conservative mode.
+              rhsPure <- isTermBindingPure (varStrictness varInfo) rhs
+              pure $ if sizeIsOk && costIsOk && rhsPure then applied else t
+            Nothing -> pure t
+        -- The variable maybe a *recursive* let binding, in which case it won't be in the map,
+        -- and we don't process it. ATM recursive bindings aren't inlined.
+        Nothing -> pure t
   | otherwise = pure t
