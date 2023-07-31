@@ -2,6 +2,7 @@
 {-# LANGUAGE BangPatterns             #-}
 {-# LANGUAGE ConstraintKinds          #-}
 {-# LANGUAGE DeriveAnyClass           #-}
+{-# LANGUAGE DuplicateRecordFields    #-}
 {-# LANGUAGE FlexibleInstances        #-}
 {-# LANGUAGE ImplicitParams           #-}
 {-# LANGUAGE LambdaCase               #-}
@@ -74,9 +75,23 @@ all the Vectors being slices of one original byte array
 3. We don't have to worry about indices
 -}
 
+-- TODO: this seems to be leading to some boxing in pushReturnFrame
+-- which doesn't happen if it's a bare int. Unclear why, but fixing
+-- it didn't seem to affect performance much, so leaving for now.
+newtype CodePointer = CodePointer { unCodePointer :: Int }
+  deriving newtype (Show, NFData)
+newtype CodePointerOffset = CodePointerOffset Int
+  deriving newtype (Show, NFData)
+
+bumpCodePointer :: CodePointer -> CodePointer
+bumpCodePointer (CodePointer ptr) = CodePointer $ ptr + 1
+
+offsetCodePointer :: CodePointer -> CodePointerOffset -> CodePointer
+offsetCodePointer (CodePointer ptr) (CodePointerOffset offset) = CodePointer $ ptr + offset
+
 data Instruction uni fun =
   Lookup { index :: {-# UNPACK #-} Word64 }
-  | Closure { code :: {-# UNPACK #-} Instructions uni fun }
+  | Closure { next :: {-# UNPACK #-} CodePointerOffset }
   | Constant { con :: Some (ValueOf uni) }
   | Builtin { fun :: fun }
   | ApplyLTR
@@ -86,11 +101,11 @@ data Instruction uni fun =
   | Return
   | Error
   | Spend ExBudget
-  | Delay { code :: {-# UNPACK #-} Instructions uni fun }
+  | Delay { next :: {-# UNPACK #-} CodePointerOffset }
   | Force
   | TailForce
-  | Constr { code :: {-# UNPACK #-} Instructions uni fun, arity :: {-# UNPACK #-} Word64, tag :: {-# UNPACK #-} Word64 }
-  | Case { branches :: {-# UNPACK #-} V.Vector (Instructions uni fun) }
+  | Constr { next :: {-# UNPACK #-} CodePointerOffset, arity :: {-# UNPACK #-} Word64, tag :: {-# UNPACK #-} Word64 }
+  | Case { next :: CodePointerOffset, branchOffsets :: {-# UNPACK #-} V.Vector CodePointerOffset }
   deriving stock (Generic)
   deriving anyclass (NFData)
 
@@ -105,23 +120,41 @@ type Instructions uni fun = V.Vector (Instruction uni fun)
 instance (PrettyBy PrettyConfigPlc a) => PrettyBy PrettyConfigPlc (V.Vector a) where
   prettyBy config vs = prettyBy config (V.toList vs)
 
+nextInstrOffset :: Instruction uni fun -> CodePointerOffset
+nextInstrOffset = \case
+  Closure next    -> next
+  Delay next      -> next
+  Constr next _ _ -> next
+  Case next _     -> next
+  _               -> CodePointerOffset 1
+
 -- costs obviously weird here
 termToInstrs :: Bool -> Bool -> CekMachineCosts -> UPLC.Term PLC.DeBruijn uni fun ann -> Instructions uni fun
 termToInstrs insertCostingInstrs insertTailCalls (CekMachineCosts{..}) term = V.singleton (Spend cekStartupCost) <> go term
   where
     go = \case
       UPLC.Var _ (PLC.DeBruijn (PLC.Index n)) -> spend cekVarCost <> V.singleton (Lookup n)
-      UPLC.LamAbs _ _ t -> spend cekLamCost <> V.singleton (Closure (goTail t))
+      UPLC.LamAbs _ _ t ->
+        let rest = goTail t
+        in spend cekLamCost <> V.singleton (Closure $ CodePointerOffset $ 1 + V.length rest) <> rest
       UPLC.Apply _ l r -> spend cekApplyCost <> go l <> go r <> V.singleton ApplyLTR
       UPLC.Force _ t -> spend cekForceCost <> go t <> V.singleton Force
-      UPLC.Delay _ t -> spend cekDelayCost <> V.singleton (Delay (goTail t))
+      UPLC.Delay _ t ->
+        let rest = goTail t
+        in spend cekDelayCost <> V.singleton (Delay $ CodePointerOffset $ 1 + V.length rest) <> rest
       UPLC.Builtin _ f -> spend cekBuiltinCost <> V.singleton (Builtin f)
       UPLC.Constant _ t -> spend cekConstCost <> V.singleton (Constant t)
       UPLC.Error _ -> V.singleton Error
       UPLC.Constr _ t args ->
         let arity = length args
-        in spend cekConstrCost <> foldMap go args <> V.singleton (Constr (V.replicate arity ApplyRTL <> V.singleton Return) (fromIntegral arity) t)
-      UPLC.Case _ scrut branches -> spend cekCaseCost <> go scrut <> V.singleton (Case (V.fromList $ fmap (\b -> goTail b) branches))
+            code = (V.replicate arity ApplyRTL <> V.singleton Return)
+        in spend cekConstrCost <> foldMap go args <> V.singleton (Constr (CodePointerOffset $ 1 + V.length code) (fromIntegral arity) t) <> code
+      UPLC.Case _ scrut branches ->
+        let branchCodes = fmap goTail branches
+            branchLengths = fmap V.length branchCodes
+            -- This is fine because scanl produces a non-empty list
+            Just (offsets, next) = V.unsnoc $ V.fromList $ fmap CodePointerOffset $ scanl (\offset len -> offset + len) 1 branchLengths
+        in spend cekCaseCost <> go scrut <> V.singleton (Case next offsets) <> V.concat branchCodes
     -- 'go', when we know the next thing should be a 'Return'
     goTail = \case
       UPLC.Apply _ l r | insertTailCalls -> spend cekApplyCost <> go l <> go r <> V.singleton TailApplyLTR
@@ -137,19 +170,17 @@ termToInstrs insertCostingInstrs insertTailCalls (CekMachineCosts{..}) term = V.
 data Value uni fun =
     -- This bang gave us a 1-2% speed-up at the time of writing.
     VCon (Some (ValueOf uni))
-  | VDelay {-# UNPACK #-} (Instructions uni fun) (Env uni fun)
-  | VClosure {-# UNPACK #-} (Instructions uni fun) (Env uni fun)
+  | VDelay { codePointer :: {-# UNPACK #-} CodePointer, env :: Env uni fun }
+  | VClosure { codePointer :: {-# UNPACK #-} CodePointer, env :: Env uni fun }
     -- | A partial builtin application, accumulating arguments for eventual full application.
     -- We don't need a 'CekValEnv' here unlike in the other constructors, because 'VBuiltin'
     -- values always store their corresponding 'Term's fully discharged, see the comments at
     -- the call sites (search for 'VBuiltin').
-  | VBuiltin
-      fun
-      (BuiltinRuntime (Value uni fun))
+  | VBuiltin { function :: fun, runtime :: BuiltinRuntime (Value uni fun) }
       -- ^ The partial application and its costing function.
       -- Check the docs of 'BuiltinRuntime' for details.
     -- | A constructor value, including fully computed arguments and the tag.
-  | VConstr {-# UNPACK #-} (Instructions uni fun) {-# UNPACK #-}Word64 {-# UNPACK #-} (V.Vector (Value uni fun))
+  | VConstr { codePointer :: {-# UNPACK #-} CodePointer, tag :: {-# UNPACK #-} Word64, args :: {-# UNPACK #-} V.Vector (Value uni fun) }
 
 instance Show (BuiltinRuntime (Value uni fun)) where
     show _ = "<builtin_runtime>"
@@ -273,7 +304,7 @@ type GivenSpender uni fun s = (?budgetSpender :: (BudgetSpender uni fun s))
 ---
 
 type Env uni fun = Env.RAList (Value uni fun)
-data Frame uni fun = Frame {-# UNPACK #-} !(Instructions uni fun) !(Env uni fun)
+data Frame uni fun = Frame {-# UNPACK #-} !CodePointer !(Env uni fun)
   deriving stock (Show)
 
 -- Some very crap stacks
@@ -309,7 +340,7 @@ runBC runtime (ExBudgetMode getExBudgetInfo) (EmitterMode getEmitterMode) code =
   cs <- BCM $ newStack 100
   let env = Env.empty
 
-  errorOrRes <- tryError (runMachine vs cs env code)
+  errorOrRes <- tryError (runMachine vs cs code env)
   st <- BCM _exBudgetModeGetFinal
   logs <- BCM _emitterInfoGetFinal
   pure (errorOrRes, st, logs)
@@ -320,21 +351,21 @@ runMachine
   , GivenEmitter uni fun s, GivenRuntime uni fun, GivenSpender uni fun s)
   => ValueStack s uni fun
   -> ControlStack s uni fun
-  -> Env uni fun
   -> Instructions uni fun
+  -> Env uni fun
   -> BCM uni fun s (Value uni fun)
-runMachine !vs !cs = enter
+runMachine !vs !cs !instrs !env = enter env (CodePointer 0)
   where
-    enter :: Env uni fun -> Instructions uni fun -> BCM uni fun s (Value uni fun)
-    enter !env !code = do
+    enter :: Env uni fun -> CodePointer -> BCM uni fun s (Value uni fun)
+    enter !env !codePtr = do
       --traceEnter
-      go code
+      go codePtr
       where
         {-# NOINLINE traceEnter #-}
         traceEnter :: BCM uni fun s ()
         traceEnter = do
           traceM "Entering:"
-          traceM $ "  Code: " ++ show code
+          traceM $ "  Code: " ++ show instrs
           vss <- showMStack vs
           traceM $ "  Value stack: " ++ vss
           css <- showMStack cs
@@ -350,17 +381,19 @@ runMachine !vs !cs = enter
           css <- showMStack cs
           traceM $ "  Control stack: " ++ css
           traceM $ "  Env: " ++ show env
-        pushReturnFrame rest = BCM $ pushStack (Frame rest env) cs
-        pushValue v = BCM $ pushStack v vs
+        pushReturnFrame !rest = BCM $ pushStack (Frame rest env) cs
+        pushValue !v = BCM $ pushStack v vs
         popValue = BCM $ popStack vs
-        go :: Instructions uni fun -> BCM uni fun s (Value uni fun)
-        go !code =
-          case V.uncons code of
+        go :: CodePointer -> BCM uni fun s (Value uni fun)
+        go !codePtr =
+          case instrs V.!? unCodePointer codePtr of
             -- Terminate
             Nothing -> popValue
-            Just (instr, rest) -> do
+            Just instr -> do
               --traceInstr instr rest
-              let continue = go rest
+              let nextOffset = nextInstrOffset instr
+                  nextPtr = offsetCodePointer codePtr nextOffset
+                  continue = go nextPtr
               case instr of
                 Lookup{index} -> do
                   case Env.indexOne env index of
@@ -368,8 +401,8 @@ runMachine !vs !cs = enter
                       pushValue v
                       continue
                     Nothing -> throwingWithCause _MachineError OpenTermEvaluatedMachineError Nothing
-                Closure{code} -> do
-                  pushValue (VClosure code env)
+                Closure{} -> do
+                  pushValue (VClosure (bumpCodePointer codePtr) env)
                   continue
                 Constant{con} -> do
                   pushValue (VCon con)
@@ -381,7 +414,7 @@ runMachine !vs !cs = enter
                 ApplyLTR -> do
                   v <- popValue
                   f <- popValue
-                  pushReturnFrame rest
+                  pushReturnFrame nextPtr
                   applyEvaluate f v
                 TailApplyLTR -> do
                   v <- popValue
@@ -390,7 +423,7 @@ runMachine !vs !cs = enter
                 ApplyRTL -> do
                   f <- popValue
                   v <- popValue
-                  pushReturnFrame rest
+                  pushReturnFrame nextPtr
                   applyEvaluate f v
                 TailApplyRTL -> do
                   f <- popValue
@@ -401,42 +434,42 @@ runMachine !vs !cs = enter
                 Spend budget -> do
                   spendBudgetBCM budget
                   continue
-                Delay{code} -> do
-                  pushValue (VDelay code env)
+                Delay{} -> do
+                  pushValue (VDelay (bumpCodePointer codePtr) env)
                   continue
                 Force -> do
                   v <- popValue
-                  pushReturnFrame rest
+                  pushReturnFrame nextPtr
                   forceEvaluate v
                 TailForce -> do
                   v <- popValue
                   forceEvaluate v
-                Constr{code, arity, tag} -> do
+                Constr{arity, tag} -> do
                   -- in reverse order
                   args <- V.replicateM (fromIntegral arity) popValue
-                  pushValue (VConstr code tag args)
+                  pushValue (VConstr (bumpCodePointer codePtr) tag args)
                   continue
-                Case{branches} -> do
+                Case{branchOffsets} -> do
                   v <- popValue
                   case v of
-                    VConstr ctorCode tag args -> case branches V.!? fromIntegral tag of
-                      Just branch -> do
+                    VConstr ctorCode tag args -> case branchOffsets V.!? fromIntegral tag of
+                      Just branchOffset -> do
                         -- reverses again, getting them in the right order
                         for_ args pushValue
                         -- When we are completely done, we want to return into
                         -- the next instruction
-                        pushReturnFrame rest
+                        pushReturnFrame nextPtr
                         -- We push a return frame for the constructor entry code to jump to
                         -- after we've computed the branch.
                         pushReturnFrame ctorCode
                         -- Enter the branch.
-                        enter env branch
+                        enter env (offsetCodePointer codePtr branchOffset)
                       Nothing -> throwingWithCause _MachineError (MissingCaseBranch tag) Nothing
                     _ -> throwingWithCause _MachineError NonConstrScrutinized Nothing
 
         doReturn = do
-          Frame code' env' <- BCM $ popStack cs
-          enter env' code'
+          Frame codePtr' env' <- BCM $ popStack cs
+          enter env' codePtr'
 
         applyEvaluate (VClosure code' env') v = enter (Env.cons v env') code'
         applyEvaluate (VBuiltin fun runtime) v =

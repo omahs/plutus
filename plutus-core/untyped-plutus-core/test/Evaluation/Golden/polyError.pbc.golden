@@ -1,1 +1,1 @@
-(Right VDelay [Error,Return] Nil)
+(Right VDelay {codePointer = 3, env = Nil})

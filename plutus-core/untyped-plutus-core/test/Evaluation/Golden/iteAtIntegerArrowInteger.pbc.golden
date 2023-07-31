@@ -1,1 +1,1 @@
-(Right VBuiltin IfThenElse <builtin_runtime>)
+(Right VBuiltin {function = IfThenElse, runtime = <builtin_runtime>})

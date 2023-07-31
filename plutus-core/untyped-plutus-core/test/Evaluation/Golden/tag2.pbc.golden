@@ -1,1 +1,1 @@
-(Right VConstr [ApplyRTL,Return] 1 [VCon (Some (ValueOf DefaultUniString "hello"))])
+(Right VConstr {codePointer = 5, tag = 1, args = [VCon (Some (ValueOf DefaultUniString "hello"))]})
