@@ -76,8 +76,9 @@ all the Vectors being slices of one original byte array
 -}
 
 -- TODO: this seems to be leading to some boxing in pushReturnFrame
--- which doesn't happen if it's a bare int. Unclear why, but fixing
--- it didn't seem to affect performance much, so leaving for now.
+-- which doesn't happen if it's a bare int. Unclear why, but changing
+-- it to a type synonym removed the unboxing and didn't seem to affect
+-- performance much, so leaving for now.
 newtype CodePointer = CodePointer { unCodePointer :: Int }
   deriving newtype (Show, NFData)
 newtype CodePointerOffset = CodePointerOffset Int
@@ -91,6 +92,7 @@ offsetCodePointer (CodePointer ptr) (CodePointerOffset offset) = CodePointer $ p
 
 data Instruction uni fun =
   Lookup { index :: {-# UNPACK #-} Word64 }
+  -- Code for the function follows, next pointer indicates next instruction after that
   | Closure { next :: {-# UNPACK #-} CodePointerOffset }
   | Constant { con :: Some (ValueOf uni) }
   | Builtin { fun :: fun }
@@ -101,10 +103,14 @@ data Instruction uni fun =
   | Return
   | Error
   | Spend ExBudget
+  -- Code for the delayed term follows, next pointer indicates next instruction after that
   | Delay { next :: {-# UNPACK #-} CodePointerOffset }
   | Force
   | TailForce
+  -- Code for the constructor application follows, next pointer indicates next instruction after that
   | Constr { next :: {-# UNPACK #-} CodePointerOffset, arity :: {-# UNPACK #-} Word64, tag :: {-# UNPACK #-} Word64 }
+  -- Code for the branches follow, next pointer indicates next instruction after that,
+  -- offsets for each branch are also givne
   | Case { next :: CodePointerOffset, branchOffsets :: {-# UNPACK #-} V.Vector CodePointerOffset }
   deriving stock (Generic)
   deriving anyclass (NFData)
@@ -120,6 +126,8 @@ type Instructions uni fun = V.Vector (Instruction uni fun)
 instance (PrettyBy PrettyConfigPlc a) => PrettyBy PrettyConfigPlc (V.Vector a) where
   prettyBy config vs = prettyBy config (V.toList vs)
 
+-- Don't worry, GHC is smart enough to inline this and optimize enough
+-- that we only do one pattern match in the end!
 nextInstrOffset :: Instruction uni fun -> CodePointerOffset
 nextInstrOffset = \case
   Closure next    -> next
@@ -168,17 +176,11 @@ termToInstrs insertCostingInstrs insertTailCalls (CekMachineCosts{..}) term = V.
 ---
 
 data Value uni fun =
-    -- This bang gave us a 1-2% speed-up at the time of writing.
     VCon (Some (ValueOf uni))
   | VDelay { codePointer :: {-# UNPACK #-} CodePointer, env :: Env uni fun }
   | VClosure { codePointer :: {-# UNPACK #-} CodePointer, env :: Env uni fun }
     -- | A partial builtin application, accumulating arguments for eventual full application.
-    -- We don't need a 'CekValEnv' here unlike in the other constructors, because 'VBuiltin'
-    -- values always store their corresponding 'Term's fully discharged, see the comments at
-    -- the call sites (search for 'VBuiltin').
   | VBuiltin { function :: fun, runtime :: BuiltinRuntime (Value uni fun) }
-      -- ^ The partial application and its costing function.
-      -- Check the docs of 'BuiltinRuntime' for details.
     -- | A constructor value, including fully computed arguments and the tag.
   | VConstr { codePointer :: {-# UNPACK #-} CodePointer, tag :: {-# UNPACK #-} Word64, args :: {-# UNPACK #-} V.Vector (Value uni fun) }
 
@@ -225,12 +227,10 @@ instance AsEvaluationFailure BCUserError where
     _EvaluationFailure = _EvaluationFailureVia BCEvaluationFailure
 
 type BCM :: (GHC.Type -> GHC.Type) -> GHC.Type -> GHC.Type -> GHC.Type -> GHC.Type
--- | The monad the CEK machine runs in.
 newtype BCM uni fun s a = BCM
     { unBCM :: ST s a
     } deriving newtype (Functor, Applicative, Monad, PrimMonad)
 
--- | The CEK machine-specific 'EvaluationException'.
 type BCEvaluationException uni fun =
     EvaluationException BCUserError (MachineError fun) (Instructions uni fun)
 
@@ -265,7 +265,7 @@ data ExBudgetInfo cost uni fun s = ExBudgetInfo
 
 -- We make a separate data type here just to save the caller from those pesky
 -- 'ST'-related details.
--- | A budgeting mode to execute the CEK machine in.
+-- | A budgeting mode to execute the machine in.
 newtype ExBudgetMode cost uni fun = ExBudgetMode
     { unExBudgetMode :: forall s. ST s (ExBudgetInfo cost uni fun s)
     }
@@ -274,7 +274,7 @@ newtype ExBudgetMode cost uni fun = ExBudgetMode
 --- Emitter
 ---
 
--- | The CEK machine is parameterized over an emitter function, similar to 'CekBudgetSpender'.
+-- | The machine is parameterized over an emitter function, similar to 'CekBudgetSpender'.
 type Emitter uni fun s = DList.DList Text -> BCM uni fun s ()
 
 -- | Runtime emitter info, similar to 'ExBudgetInfo'.
@@ -283,7 +283,7 @@ data EmitterInfo uni fun s = EmitterInfo {
     , _emitterInfoGetFinal :: !(ST s [Text])
     }
 
--- | An emitting mode to execute the CEK machine in, similar to 'ExBudgetMode'.
+-- | An emitting mode to execute the machine in, similar to 'ExBudgetMode'.
 newtype EmitterMode uni fun = EmitterMode
     { unEmitterMode :: forall s. ST s ExBudget -> ST s (EmitterInfo uni fun s)
     }
@@ -304,10 +304,11 @@ type GivenSpender uni fun s = (?budgetSpender :: (BudgetSpender uni fun s))
 ---
 
 type Env uni fun = Env.RAList (Value uni fun)
+-- I tried to avoid allocating these by having two stacks, one for
+-- pointers and one for environments, but it didn't make much difference
 data Frame uni fun = Frame {-# UNPACK #-} !CodePointer !(Env uni fun)
   deriving stock (Show)
 
--- Some very crap stacks
 type ValueStack s uni fun = MStack s (Value uni fun)
 type ControlStack s uni fun = MStack s (Frame uni fun)
 

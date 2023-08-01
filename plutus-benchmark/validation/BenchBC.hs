@@ -19,7 +19,7 @@ main = do
               (MachineParameters !costs !runtime) = B.defaultBCParameters
               t = toNamedDeBruijnTerm . UPLC._progTerm $ unsafeUnflat file program
               !benchTerm =
-                force $ B.termToInstrs True False costs $ UPLC.termMapNames unNameDeBruijn t
+                force $ B.termToInstrs True True costs $ UPLC.termMapNames unNameDeBruijn t
               eval dbt =
                   let (res, _, _) = B.runBC runtime B.restrictingEnormous B.noEmitter dbt
                   in either (error . show) (\_ -> ()) res
