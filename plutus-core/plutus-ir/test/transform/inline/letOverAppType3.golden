@@ -6,7 +6,7 @@
   [
     { idFun (con integer) }
     [
-      [ { idFun (fun (con integer) (con integer)) } { idFun (con integer) } ]
+      [ { idFun (fun (con integer) (con integer)) } (lam x (con integer) x) ]
       (con integer 3)
     ]
   ]
