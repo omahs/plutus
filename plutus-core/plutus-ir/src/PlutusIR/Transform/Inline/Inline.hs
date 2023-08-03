@@ -214,8 +214,8 @@ processTerm = handleTerm <=< traverseOf termSubtypes applyTypeSubstitution where
             pure $ mkLet ann NonRec bs' t'
         -- This includes recursive let terms, we don't even consider inlining them at the moment
         t -> do
-            -- t' <- inlineApp t
-            forMOf termSubterms t processTerm
+            t' <- inlineApp t
+            forMOf termSubterms t' processTerm
             -- error $
         --     " tm t" <> show (unsafeCoerce t::Term TyName Name PLC.DefaultUni PLC.DefaultFun ())
             -- process all subterms first, so that the rhs won't be processed more than once. This
