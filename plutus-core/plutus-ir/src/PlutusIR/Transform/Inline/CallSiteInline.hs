@@ -177,15 +177,18 @@ inlineApp ::
   InlineM tyname name uni fun ann (Term tyname name uni fun ann)
 inlineApp t
   | (var@(Var _ann name), args) <- splitApplication t =
-    -- error $
-    --   " tm " <> show (unsafeCoerce t::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
-    --   <> " var " <> show (unsafeCoerce var::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
-    --   <> " args "
-    --   <> show (unsafeCoerce args::AppContext TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
+
       gets (lookupVarInfo name) >>= \case
         Just varInfo -> do
           -- rename the rhs of the variable before any substitution
           rhs <- liftDupable (let Done rhs = varRhs varInfo in rhs)
+          trace
+            ( " tm " <> show (unsafeCoerce t::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
+              <> " var " <> show (unsafeCoerce var::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
+              <> " args "
+              <> show (unsafeCoerce args::AppContext TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
+            )
+            id
           applyAndBetaReduce rhs args >>= \case
             Just applied -> do -- there is beta reduction of the application
               let -- Inline only if the size is no bigger than not inlining.
