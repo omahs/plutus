@@ -55,11 +55,7 @@ testLedgerLanguages = testGroup "ledger languages"
            -- generated an eq or gt the expected protocol version
            else isRight resPhase1
 
-
-instance Arbitrary ProtocolVersion where
-    arbitrary = ProtocolVersion <$> arbitrary <*> arbitrary
-
-testBuiltinVersions :: TestTree
+testBuiltins :: TestTree
 testBuiltinVersions = testGroup "builtins"
     [ testCase "all builtins are available some time" $
             let allPvBuiltins = fold $ Map.elems builtinsIntroducedIn
