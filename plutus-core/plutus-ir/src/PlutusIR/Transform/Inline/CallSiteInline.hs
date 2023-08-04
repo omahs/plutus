@@ -21,6 +21,7 @@ import PlutusIR.Transform.Substitute
 
 import Control.Monad.State (gets)
 import Debug.Trace
+import PlutusCore.Pretty (display)
 import Unsafe.Coerce (unsafeCoerce)
 
 {- Note [Inlining and beta reduction of fully applied functions]
@@ -90,31 +91,31 @@ applyAndBetaReduce rhs args0 = do
                   tm -- drop the beta reduced term lambda
               trace
                 ( "LamAbs & TermAppContext, safe and substituted arg \n"
-                  <> "name \n " <> show (unsafeCoerce n::Name) <> "\n"
+                  <> "name \n " <> display (unsafeCoerce n::Name) <> "\n"
                   <>" arg0 \n"
                   <> show (unsafeCoerce args0::AppContext TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
                   <> " arg \n"
-                  <> show (unsafeCoerce arg::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
+                  <> display (unsafeCoerce arg::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
                   <> " args' \n"
                   <> show (unsafeCoerce args'::AppContext TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
                   <> " args \n"
                   <> show (unsafeCoerce args::AppContext TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
                   <> " acc \n"
-                  <> show (unsafeCoerce acc::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
-                  <> " tm \n" <> show (unsafeCoerce tm::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
+                  <> display (unsafeCoerce acc::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
+                  <> " tm \n" <> display (unsafeCoerce tm::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
                   <> " rhs \n "
-                  <> show (unsafeCoerce rhs::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n")
+                  <> display (unsafeCoerce rhs::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n")
                 (go acc' args')
             else pure . Just $ trace
                 ( "LamAbs & TermAppContext, unsafe \n" <>
-                  "name \n " <> show (unsafeCoerce n::Name)
+                  "name \n " <> display (unsafeCoerce n::Name)
                   <> " arg or rhs that is the input of safeToBetaReduce \n "
-                  <> show (unsafeCoerce arg::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
+                  <> display (unsafeCoerce arg::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
                   <>  "acc or body that is the input of safeToBetaReduce\n "
-                  <> show (unsafeCoerce acc::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
-                  <> "used at most once? \n " <> show usedOnce
-                  <> "is arg pure \n" <> show isTermPure
-                  <> "is effect safe \n " <> show isEffectSafe
+                  <> display (unsafeCoerce acc::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
+                  <> "used at most once? \n " <> display usedOnce
+                  <> "is arg pure \n" <> display isTermPure
+                  <> "is effect safe \n " <> display isEffectSafe
                   <> " arg0 \n"
                   <> show (unsafeCoerce args0::AppContext TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
                   <> " args' \n"
@@ -122,10 +123,10 @@ applyAndBetaReduce rhs args0 = do
                   <> " args \n"
                   <> show (unsafeCoerce args::AppContext TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
                   <> " acc \n"
-                  <> show (unsafeCoerce acc::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
-                  <> " tm \n" <> show (unsafeCoerce tm::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
+                  <> display (unsafeCoerce acc::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
+                  <> " tm \n" <> display (unsafeCoerce tm::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
                   <> " rhs \n "
-                  <> show (unsafeCoerce rhs::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
+                  <> display (unsafeCoerce rhs::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
                 )
                   (fillAppContext acc appCtx)
         (TyAbs _ann n _kd tm, TypeAppContext arg _ args') -> do
@@ -141,10 +142,10 @@ applyAndBetaReduce rhs args0 = do
               <> " args \n"
               <> show (unsafeCoerce args::AppContext TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
               <> " acc \n"
-              <> show (unsafeCoerce acc::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
-              <> " tm \n" <> show (unsafeCoerce tm::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
+              <> display (unsafeCoerce acc::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
+              <> " tm \n" <> display (unsafeCoerce tm::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
               <> " rhs \n "
-              <> show (unsafeCoerce rhs::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n")
+              <> display (unsafeCoerce rhs::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n")
             (go acc' args')
         -- term/type argument mismatch, don't inline
         (LamAbs{}, TypeAppContext{}) -> error "lamAbs, type"--pure Nothing
@@ -154,7 +155,7 @@ applyAndBetaReduce rhs args0 = do
         (acc, TypeAppContext{}) -> error "type"  -- pure . Just $ fillAppContext acc appCtx
         (acc, TermAppContext{}) -> error "term"
         (acc, AppContextEnd) -> pure $ Just acc
-          -- show (unsafeCoerce acc::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"<> "end"
+          -- display (unsafeCoerce acc::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"<> "end"
       -- Is it safe to turn `(\a -> body) arg` into `body [a := arg]`?
       -- The criteria is the same as the criteria for inlining `a` in
       -- `let !a = arg in body`.
@@ -183,9 +184,9 @@ inlineApp t
           -- rename the rhs of the variable before any substitution
           rhs <-
             trace
-            ( "Just varInfo case \n" <> -- show varInfo
-              " tm " <> show (unsafeCoerce t::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
-              <> " var " <> show (unsafeCoerce var::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
+            ( "Just varInfo case \n" <> -- display varInfo
+              " tm " <> display (unsafeCoerce t::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
+              <> " var " <> display (unsafeCoerce var::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
               <> " args "
               <> show (unsafeCoerce args::AppContext TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
             )

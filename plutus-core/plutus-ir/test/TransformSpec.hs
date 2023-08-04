@@ -243,7 +243,7 @@ inline =
             -- -- these tests are all let bindings of functions
             -- , "letFunConstInt" -- const fn fully applied (integer)
             -- , "letFunConstBool" -- const fn fully applied (bool)
-             "letFunConstMulti" -- multiple occurrences of a let binding of the const fn.
+            --  "letFunConstMulti" -- multiple occurrences of a let binding of the const fn.
             -- , "letFunInFun" -- fully applied fn inside another let, single occurrence.
             -- , "letFunInFunMulti" -- fully applied fn inside another let, multiple occurrences.
             -- -- similar to "letFunInFunMulti" but all fns are fully applied.
@@ -258,7 +258,7 @@ inline =
             -- multiple occurrences of a function application in rhs with not acceptable body
             -- , "letAppMultiNotAcceptable"
             -- , "letOverApp" -- over-application of a function, single occurrence
-            --  "letOverAppMulti" -- multiple occurrences of an over-application of a function
+             "letOverAppMulti" -- multiple occurrences of an over-application of a function
             -- multiple occurrences of an over-application of a function with type arguments
             -- , "letOverAppType"
             -- , "letOverAppType3"
