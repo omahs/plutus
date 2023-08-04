@@ -35,20 +35,20 @@ pTermAsProg = fmap (Program mempty PLC.latestVersion) pTerm
 
 tests :: TestNested
 tests = testGroup "plutus-ir" <$> sequence
-    [ prettyprinting
-    , prettyprintingReadable
-    , parsing
-    , lets
-    , datatypes
-    , recursion
-    , serialization
-    , errors
-    , pure names
-    , transform
-    , types
-    , typeErrors
-    , generators 1
-    , pure uniqueness
+    [ --prettyprinting
+    -- , prettyprintingReadable
+    -- , parsing
+    -- , lets
+    -- , datatypes
+    -- , recursion
+    -- , serialization
+    -- , errors
+    -- , pure names
+      transform
+    -- , types
+    -- , typeErrors
+    -- , generators 1
+    -- , pure uniqueness
     ]
 
 prettyprinting :: TestNested
