@@ -1,4 +1,5 @@
 -- editorconfig-checker-disable-file
+{-# LANGUAGE BangPatterns          #-}
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE DeriveAnyClass        #-}
 {-# LANGUAGE DerivingStrategies    #-}
@@ -99,7 +100,7 @@ unsafeApplyCode
     , PLC.Everywhere uni PrettyConst
     , PrettyBy RenderContext (PLC.SomeTypeIn uni))
     => CompiledCodeIn uni fun (a -> b) -> CompiledCodeIn uni fun a -> CompiledCodeIn uni fun b
-unsafeApplyCode fun arg = case applyCode fun arg of
+unsafeApplyCode !fun !arg = case applyCode fun arg of
   Right c  -> c
   Left err -> error err
 
