@@ -150,11 +150,19 @@ applyAndBetaReduce rhs args0 = do
         (LamAbs{}, TypeAppContext{}) -> error "lamAbs, type"--pure Nothing
         (TyAbs{}, TermAppContext{}) -> error "tyabs term" --pure Nothing
         -- no more lambda abstraction, just return the processed application
-        -- (, appCtx) -> pure . Just $ fillAppContext acc appCtx
-        (acc, TypeAppContext{}) -> error "type"  -- pure . Just $ fillAppContext acc appCtx
-        (acc, TermAppContext{}) -> error "term"
-        (acc, AppContextEnd) -> pure $ Just acc
-          -- display (unsafeCoerce acc::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"<> "end"
+        (_, appCtx) -> pure . Just $ trace
+                ( "no more lambda abstraction \n"
+                  <> " arg0 \n"
+                  <> show (unsafeCoerce args0::AppContext TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
+                  <> " appCtx \n"
+                  <> show (unsafeCoerce appCtx::AppContext TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
+                  <> " acc \n"
+                  <> display (unsafeCoerce acc::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
+                  <> " rhs \n "
+                  <> display (unsafeCoerce rhs::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n"
+                )
+                  (fillAppContext acc appCtx)
+
       -- Is it safe to turn `(\a -> body) arg` into `body [a := arg]`?
       -- The criteria is the same as the criteria for inlining `a` in
       -- `let !a = arg in body`.

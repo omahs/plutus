@@ -1,3 +1,5 @@
+-- editorconfig-checker-disable-file
+
 {-# LANGUAGE ConstraintKinds  #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs            #-}
@@ -35,6 +37,7 @@ import Algebra.Graph qualified as G
 import Data.Map qualified as Map
 import PlutusIR.Contexts (AppContext (..), splitApplication)
 import PlutusIR.Transform.Inline.CallSiteInline (callSiteInline)
+import Unsafe.Coerce (unsafeCoerce)
 import Witherable (Witherable (wither))
 
 {- Note [Inlining approach and 'Secrets of the GHC Inliner']
@@ -229,8 +232,15 @@ processTerm = handleTerm <=< traverseOf termSubtypes applyTypeSubstitution where
                 processArgs AppContextEnd = pure AppContextEnd
 
             -- process the args
-            processedArgs <- processArgs args
-            t' <- callSiteInline t tm processedArgs
+            processedArgs <-
+                trace
+                    ("processing args " <> " args \n"
+                  <> show (unsafeCoerce args::AppContext TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n")
+                    (processArgs args)
+            t' <- trace
+                    ("callSiteInlining term " <> " t \n"
+                  <> display (unsafeCoerce t::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n")
+                  (callSiteInline t tm processedArgs)
             forMOf termSubterms t' processTerm
             -- error $
         --     " tm t" <> show (unsafeCoerce t::Term TyName Name PLC.DefaultUni PLC.DefaultFun ())
