@@ -241,7 +241,10 @@ processTerm = handleTerm <=< traverseOf termSubtypes applyTypeSubstitution where
                     ("callSiteInlining term " <> " t \n"
                   <> display (unsafeCoerce t::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n")
                   (callSiteInline t tm processedArgs)
-            forMOf termSubterms t' processTerm
+            trace
+                    ("finished call site inlining, result is " <> " t' \n"
+                  <> display (unsafeCoerce t'::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n")
+                  (forMOf termSubterms t' processTerm)
             -- error $
         --     " tm t" <> show (unsafeCoerce t::Term TyName Name PLC.DefaultUni PLC.DefaultFun ())
             -- process all subterms first, so that the rhs won't be processed more than once. This
