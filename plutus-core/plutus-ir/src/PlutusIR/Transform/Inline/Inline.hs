@@ -223,9 +223,13 @@ processTerm = handleTerm <=< traverseOf termSubtypes applyTypeSubstitution where
                 processArgs :: AppContext tyname name uni fun ann
                     -> InlineM tyname name uni fun ann (AppContext tyname name uni fun ann)
                 processArgs (TermAppContext arg ann ctx) = do
-                    processedArg <- processTerm arg
+                    processedArg <- processTerm arg --forMOf termSubterms arg processTerm
                     processedArgs <- processArgs ctx
-                    pure $ TermAppContext processedArg ann processedArgs
+                    pure $
+                        trace
+                          ("Finished processing arguments. The processed arg is " <> " processedArg \n"
+                          <> display (unsafeCoerce processedArg::Term TyName Name PLC.DefaultUni PLC.DefaultFun ()) <> "\n")
+                          (TermAppContext processedArg ann processedArgs)
                 processArgs (TypeAppContext ty ann ctx) = do
                     processedArgs <- processArgs ctx
                     pure $ TypeAppContext ty ann processedArgs
