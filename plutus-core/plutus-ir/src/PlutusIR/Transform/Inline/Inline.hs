@@ -33,8 +33,8 @@ import Control.Monad.State (evalStateT, modify')
 
 import Algebra.Graph qualified as G
 import Data.Map qualified as Map
-import PlutusIR.Transform.Inline.CallSiteInline (inlineApp)
-import Unsafe.Coerce (unsafeCoerce)
+import PlutusIR.Contexts (AppContext (..), splitApplication)
+import PlutusIR.Transform.Inline.CallSiteInline (callSiteInline)
 import Witherable (Witherable (wither))
 
 {- Note [Inlining approach and 'Secrets of the GHC Inliner']
@@ -214,7 +214,23 @@ processTerm = handleTerm <=< traverseOf termSubtypes applyTypeSubstitution where
             pure $ mkLet ann NonRec bs' t'
         -- This includes recursive let terms, we don't even consider inlining them at the moment
         t -> do
-            t' <- inlineApp t
+            -- See note [Processing order of call site inlining]
+            let (tm, args) = splitApplication t
+                -- process the term args, ignore the type arguments
+                processArgs :: AppContext tyname name uni fun ann
+                    -> InlineM tyname name uni fun ann (AppContext tyname name uni fun ann)
+                processArgs (TermAppContext arg ann ctx) = do
+                    processedArg <- processTerm arg
+                    processedArgs <- processArgs ctx
+                    pure $ TermAppContext processedArg ann processedArgs
+                processArgs (TypeAppContext ty ann ctx) = do
+                    processedArgs <- processArgs ctx
+                    pure $ TypeAppContext ty ann processedArgs
+                processArgs AppContextEnd = pure AppContextEnd
+
+            -- process the args
+            processedArgs <- processArgs args
+            t' <- callSiteInline t tm processedArgs
             forMOf termSubterms t' processTerm
             -- error $
         --     " tm t" <> show (unsafeCoerce t::Term TyName Name PLC.DefaultUni PLC.DefaultFun ())
