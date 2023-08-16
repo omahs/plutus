@@ -137,7 +137,7 @@ data Value where
           → ∀{YS} → (q : YS ≡ [] <>< XS)
           → {ts : IBwd (∅ ⊢_) YS}
           → (vs : VList ts)
-          → ∀ {ts' : IList (∅ ⊢_) XS} → (IBwd2IList q ts ≡ ts')
+          → ∀ {ts' : IList (∅ ⊢_) XS} → (IBwd2IList (lemma<>1' _ _ q) ts ≡ ts')
           → Value (constr e TSS p ts')
 
 red2cekVal : ∀{A}{L : ∅ ⊢ A} → Value L → CEK.Value A
@@ -229,8 +229,7 @@ case- cs         [ L ]ᶠ = case L cs
 ```
 data EC : (T : ∅ ⊢Nf⋆ *) → (H : ∅ ⊢Nf⋆ *) → Set where
   []   : {A : ∅ ⊢Nf⋆ *} → EC A A
-  _l·_ : {A B C : ∅ ⊢Nf⋆ *} → EC (A ⇒ B) C → ∅ ⊢ A → EC B C
-  _l·v_ : {A B C : ∅ ⊢Nf⋆ *} → EC (A ⇒ B) C → {t : ∅ ⊢ A} → Value t → EC B C
+  _l·_ : {A B C : ∅ ⊢Nf⋆ *} → EC (A ⇒ B) C → (t : ∅ ⊢ A) → EC B C
   _·r_ : {A B C : ∅ ⊢Nf⋆ *}{t : ∅ ⊢ A ⇒ B} → Value t → EC A C → EC B C
   _·⋆_/_ : ∀{K}{B : ∅ ,⋆ K ⊢Nf⋆ *}{C}{X}
     → EC (Π B) C → (A : ∅ ⊢Nf⋆ K) → X ≡ B [ A ]Nf → EC X C
@@ -243,7 +242,7 @@ data EC : (T : ∅ ⊢Nf⋆ *) → (H : ∅ ⊢Nf⋆ *) → Set where
     → EC X C
   constr : ∀{n VS H TS C} 
           → (i : Fin n) 
-          → (TSS : Vec _ n)  
+          → (TSS : Vec (List (∅ ⊢Nf⋆ *)) n)  
           → ∀ {XS} → (XS ≡ Vec.lookup TSS i)
           → {tidx : XS ≣ VS <>> (H ∷ TS)} 
           → {tvs : IBwd (∅ ⊢_) VS} → VList tvs → ConstrArgs ∅ TS
@@ -254,7 +253,7 @@ data EC : (T : ∅ ⊢Nf⋆ *) → (H : ∅ ⊢Nf⋆ *) → Set where
 -- Plugging of evaluation contexts
 _[_]ᴱ : ∀{A B : ∅ ⊢Nf⋆ *} → EC B A → ∅ ⊢ A → ∅ ⊢ B
 []       [ L ]ᴱ = L
-(E l· B) [ L ]ᴱ = E [ L ]ᴱ · B
+(E l· B ) [ L ]ᴱ = E [ L ]ᴱ · B
 (V ·r E) [ L ]ᴱ = deval V · E [ L ]ᴱ
 (E ·⋆ A / q) [ L ]ᴱ = E [ L ]ᴱ ·⋆ A / q
 (wrap   E) [ L ]ᴱ = wrap _ _ (E [ L ]ᴱ)
@@ -315,7 +314,7 @@ data _—→⋆_ : {A : ∅ ⊢Nf⋆ *} → (∅ ⊢ A) → (∅ ⊢ A) → Set 
     → ∀{YS} → (q : YS ≡ [] <>< Vec.lookup TSS e)
     → {ts : IBwd (∅ ⊢_) YS}
     → (vs : VList ts)
-    → ∀ {ts' : IList (∅ ⊢_) (Vec.lookup TSS e)} → (IBwd2IList q ts ≡ ts')
+    → ∀ {ts' : IList (∅ ⊢_) (Vec.lookup TSS e)} → (IBwd2IList (lemma<>1' _ _ q) ts ≡ ts')
     → (cases : Cases ∅ A TSS)
     → case (constr e TSS refl ts') cases —→⋆ applyCase (lookupCase e cases) ts'
 -- -}
