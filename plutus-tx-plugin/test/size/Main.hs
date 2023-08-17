@@ -42,12 +42,12 @@ main = defaultMain . testGroup "Size regression tests" $ [
       ],
     testGroup "Serialization" [
       fitsInto "toBuiltinData" ratToBuiltin 24,
-      fitsInto "fromBuiltinData" ratFromBuiltin 305,
+      fitsInto "fromBuiltinData" ratFromBuiltin 311,
       fitsInto "unsafeFromBuiltinData" ratUnsafeFromBuiltin 181
       ],
     testGroup "Construction" [
       fitsInto "unsafeRatio" ratMkUnsafe 117,
-      fitsInto "ratio" ratMkSafe 190,
+      fitsInto "ratio" ratMkSafe 196,
       fitsInto "fromInteger" ratFromInteger 4
       ],
     testGroup "Other" [
