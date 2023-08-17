@@ -78,6 +78,7 @@ data FocusedProgDissect : ∀{tot}(itot : IList (∅ ⊢_) tot) → Set
            → ∀ {ls : List (∅ ⊢Nf⋆ *)}(cs : ConstrArgs ∅ ls)
            → {idx : tot ≣ bs <>> (A ∷ ls)} → (iidx : (itot ≣I ibs <>> (M ∷ cs)) idx)
            → FocusedProgDissect itot
+
 progress : {A : ∅ ⊢Nf⋆ *} → (M : ∅ ⊢ A) → Progress M
 
 -- Walk the list to look for the first term than can make progress or is an error.
@@ -92,12 +93,6 @@ progress-focus (c ∷ cs) x Vs with progress c
 ... | step st = step Vs st cs x
 ... | done V = progress-focus cs (bubble x) (Vs :< V)
 ... | error e = error Vs e cs x
-
-progress-constr : ∀ {n} (e : Fin n)
-                    (TSS : Vec.Vec (List (∅ ⊢Nf⋆ *)) n)
-                    (cs : ConstrArgs ∅ (lookup TSS e))
-                  → FocusedProgDissect cs
-progress-constr e TSS cs = progress-focus cs start []
 
 progress (ƛ M)        = done (V-ƛ M)
 progress (M · M')     with progress M
@@ -136,7 +131,7 @@ progress (unwrap M refl) with progress M
 progress (con c refl)      = done (V-con c)
 progress (builtin b / refl ) = done (ival b)
 progress (error A)    = error E-error
-progress (constr i TSS refl cs)  with progress-constr i TSS cs
+progress (constr i TSS refl cs)  with progress-focus cs start []
 ... | done {bs}{ibs}{idx = idx} x Vs = done (V-constr i 
                                                      TSS 
                                                      refl 
@@ -144,12 +139,12 @@ progress (constr i TSS refl cs)  with progress-constr i TSS cs
                                                      Vs 
                                                      (trans (≡-subst-removable (IList (_⊢_ ∅)) _ _ (ibs <>>I [])) (sym (lem-≣I-<>>1' x))))
 ... | step Vs (ruleEC E p refl refl) cs {idx} x = 
-                     step (ruleEC (constr i TSS refl {getIdx≡I x} Vs cs E) 
+                     step (ruleEC (constr i TSS refl {idx} Vs cs E) 
                            p 
                            (constr-cong (lem-≣-<>> idx) (lem-≣I-<>>1' x))
                            refl)
 ... | step Vs (ruleErr E refl) cs {idx} x = 
-             step (ruleErr (constr i TSS refl {getIdx≡I x} Vs cs E) 
+             step (ruleErr (constr i TSS refl {idx} Vs cs E) 
                     (constr-cong (lem-≣-<>> idx) (lem-≣I-<>>1' x))
                   )
 ... | error {ibs = ibs} Vs E-error Ps {idx} x = 
