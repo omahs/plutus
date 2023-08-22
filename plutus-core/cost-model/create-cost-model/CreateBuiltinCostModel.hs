@@ -952,22 +952,28 @@ bls12_381_finalVerify cpuModelR = do
     let memModel = boolMemModel
     pure $ CostingFun cpuModel memModel
 
+---------------- Bitwise operations ----------------
+
+identityFunction :: OneVariableLinearFunction
+identityFunction = OneVariableLinearFunction 0 1
+
 integerToByteString :: MonadR m => (SomeSEXP (Region m)) -> m (CostingFun ModelOneArgument)
 integerToByteString cpuModelR = do
   cpuModel <- ModelOneArgumentLinearCost <$> readModelLinearInX cpuModelR
-  let memModel = ModelOneArgumentLinearCost $ ModelLinearSize 0 1
+  let memModel = ModelOneArgumentLinearCost identityFunction
   pure $ CostingFun cpuModel memModel
 
 byteStringToInteger :: MonadR m => (SomeSEXP (Region m)) -> m (CostingFun ModelOneArgument)
 byteStringToInteger cpuModelR = do
   cpuModel <- ModelOneArgumentLinearCost <$> readModelLinearInX cpuModelR
-  let memModel = ModelOneArgumentLinearCost $ ModelLinearSize 0 1
+  let memModel = ModelOneArgumentLinearCost identityFunction
   pure $ CostingFun cpuModel memModel
 
 andByteString :: MonadR m => (SomeSEXP (Region m)) -> m (CostingFun ModelTwoArguments)
 andByteString cpuModelR = do
   cpuModel <-  ModelTwoArgumentsMaxSize <$> readModelMaxSize cpuModelR
   let memModel = ModelTwoArgumentsMaxSize $ ModelMaxSize 0 1
+  -- In fact we require the arguments to have the same length, failing otherwise
   pure $ CostingFun cpuModel memModel
 
 iorByteString :: MonadR m => (SomeSEXP (Region m)) -> m (CostingFun ModelTwoArguments)
@@ -985,42 +991,42 @@ xorByteString cpuModelR = do
 complementByteString :: MonadR m => (SomeSEXP (Region m)) -> m (CostingFun ModelOneArgument)
 complementByteString cpuModelR = do
   cpuModel <- ModelOneArgumentLinearCost <$> readModelLinearInX cpuModelR
-  let memModel = ModelOneArgumentLinearCost $ ModelLinearSize 0 1
+  let memModel = ModelOneArgumentLinearCost identityFunction
   pure $ CostingFun cpuModel memModel
 
 shiftByteString :: MonadR m => (SomeSEXP (Region m)) -> m (CostingFun ModelTwoArguments)
 shiftByteString cpuModelR = do
-  cpuModel <- undefined
-  let memModel = undefined
+  cpuModel <- ModelTwoArgumentsLinearInX <$> readModelLinearInX cpuModelR -- Careful: what if the shift is huge?
+  let memModel = ModelTwoArgumentsLinearInX identityFunction
   pure $ CostingFun cpuModel memModel
 
 rotateByteString :: MonadR m => (SomeSEXP (Region m)) -> m (CostingFun ModelTwoArguments)
 rotateByteString cpuModelR = do
-  cpuModel <- undefined  -- FIXME
-  let memModel = undefined -- FIXME
+  cpuModel <- ModelTwoArgumentsLinearInX <$> readModelLinearInX cpuModelR -- Careful: what if the count is huge?
+  let memModel = ModelTwoArgumentsLinearInX identityFunction
   pure $ CostingFun cpuModel memModel
 
 popCountByteString :: MonadR m => (SomeSEXP (Region m)) -> m (CostingFun ModelOneArgument)
 popCountByteString cpuModelR = do
   cpuModel <- ModelOneArgumentLinearCost <$> readModelLinearInX cpuModelR
-  let memModel = ModelOneArgumentLinearCost $ ModelLinearSize 0 1  -- FIXME
+  let memModel = ModelOneArgumentLinearCost identityFunction  -- Really logarithmic: see how it works and fix it later
   pure $ CostingFun cpuModel memModel
 
 testBitByteString :: MonadR m => (SomeSEXP (Region m)) -> m (CostingFun ModelTwoArguments)
 testBitByteString cpuModelR = do
-  cpuModel <- undefined -- FIXME
-  let memModel = ModelTwoArgumentsConstantCost 1
+  cpuModel <- ModelTwoArgumentsLinearInX <$> readModelLinearInX cpuModelR
+  let memModel = ModelTwoArgumentsConstantCost 1  -- Bolean result
   pure $ CostingFun cpuModel memModel
 
 writeBitByteString :: MonadR m => (SomeSEXP (Region m)) -> m (CostingFun ModelThreeArguments)
 writeBitByteString cpuModelR = do
-  cpuModel <- undefined -- FIXME
-  let memModel = undefined -- FIXME
+  cpuModel <- ModelThreeArgumentsLinearInX <$> readModelLinearInX cpuModelR
+  let memModel = ModelThreeArgumentsLinearInX identityFunction -- Same size as input
   pure $ CostingFun cpuModel memModel
 
 findFirstSetByteString :: MonadR m => (SomeSEXP (Region m)) -> m (CostingFun ModelOneArgument)
 findFirstSetByteString cpuModelR = do
-  cpuModel <- ModelOneArgumentLinearCost <$> readModelLinearInX cpuModelR
-  let memModel = undefined -- FIXME
+  cpuModel <- ModelOneArgumentLinearCost <$> readModelLinearInX cpuModelR -- Time is proportional to length in worst case
+  let memModel = ModelOneArgumentLinearCost identityFunction  -- Really logarithmic
   pure $ CostingFun cpuModel memModel
 

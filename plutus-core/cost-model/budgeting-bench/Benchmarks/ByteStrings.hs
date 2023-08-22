@@ -95,16 +95,17 @@ benchConsByteString =
         -- the range of [0..255] (Word8). Otherwise
         -- we run the risk of costing also the (fast) failures of the builtin call.
 
-makeBenchmarks :: StdGen -> [Benchmark]
-makeBenchmarks gen =  [ benchTwoByteStrings AppendByteString,
-                        benchConsByteString,
-                        benchLengthOfByteString,
-                        benchIndexByteString gen,
-                        benchSliceByteString
-                      ]
-                      <> [benchDifferentByteStringsElementwise EqualsByteString]
-                      <> (benchSameTwoByteStrings <$>
-                        [ EqualsByteString, LessThanEqualsByteString, LessThanByteString ])
+makeBasicByteStringBenchmarks :: StdGen -> [Benchmark]
+makeBasicByteStringBenchmarks gen =
+    [ benchTwoByteStrings AppendByteString
+    , benchConsByteString
+    , benchLengthOfByteString
+    , benchIndexByteString gen
+    , benchSliceByteString
+    ]
+    <> [benchDifferentByteStringsElementwise EqualsByteString]
+    <> (benchSameTwoByteStrings <$>
+        [ EqualsByteString, LessThanEqualsByteString, LessThanByteString ])
 
 
 {- Results for bytestrings of size integerPower 2 <$> [1..20::Integer].  The
@@ -141,3 +142,155 @@ makeBenchmarks gen =  [ benchTwoByteStrings AppendByteString,
    functions.
 
 -}
+
+
+{-
+integerToByteString                : [ integer ] -> bytestring
+CPU: linear
+Mem: linear
+
+byteStringToInteger                : [ bytestring ] -> integer
+CPU: linear
+Mem: linear
+
+andByteString                      : [ bytestring, bytestring ] -> bytestring
+CPU: linear in max
+Mem: max
+
+iorByteString                      : [ bytestring, bytestring ] -> bytestring
+CPU: linear in max
+Mem: max
+
+xorByteString                      : [ bytestring, bytestring ] -> bytestring
+CPU: linear in max
+Mem: max
+
+complementByteString               : [ bytestring ] -> bytestring
+CPU: linear
+Mem: X
+
+We may need a ModelTwoArguments thing that actually involves both X and Y for
+some of these.
+
+shiftByteString                    : [ bytestring, integer ] -> bytestring
+Cpu: linear in X & Y
+Mem:  X+Y
+
+rotateByteString                   : [ bytestring, integer ] -> bytestring
+Cpu:  linear in X & Y
+Mem:  X
+
+popCountByteString                 : [ bytestring ] -> integer
+CPU: linear
+Mem: linear (but probably really const)
+
+testBitByteString                  : [ bytestring, integer ] -> bool
+CPU: linear
+Mem: linear (but probably really const)
+
+writeBitByteString                 : [ bytestring, integer, bool ] -> bytestring
+CPU: constant?
+Mem: X
+
+findFirstSetByteString             : [ bytestring ] -> integer
+Cpu: linear
+Mem:  linear (worst case)
+-}
+
+
+zeroByteStrings :: [BS.ByteString]
+zeroByteStrings = fmap (flip BS.replicate 0) $ fmap (8*10*) [1..150]
+
+onesByteStrings :: [BS.ByteString]
+onesByteStrings = fmap (flip BS.replicate 0xFF) $ fmap (8*10*) [1..150]
+
+--This seems to flatten out suspiciously.  Failing for large numbers?
+benchIntegerToByteString :: StdGen -> Benchmark
+benchIntegerToByteString gen =
+    bgroup (show name) $ fmap mkBM inputs
+        where mkBM b = benchDefault (showMemoryUsage b) $ mkApp1 name [] b
+              (inputs, _) = makeSizedIntegers gen [1, 3..101]
+              name = IntegerToByteString
+
+benchByteStringToInteger :: Benchmark
+benchByteStringToInteger =
+    bgroup (show name) $ fmap mkBM (smallerByteStrings150 seedA)
+        where mkBM b = benchDefault (showMemoryUsage b) $ mkApp1 name [] b
+              name = ByteStringToInteger
+
+-- We just benchmark And, since Or and Xor should be very similar
+benchAndByteString :: Benchmark
+benchAndByteString =
+    benchDifferentByteStringsElementwise AndByteString
+
+benchComplementByteString :: Benchmark
+benchComplementByteString =
+    bgroup (show name) $ fmap mkBM zeroByteStrings
+        where mkBM b = benchDefault (showMemoryUsage b) $ mkApp1 name [] b
+              name = ComplementByteString
+
+benchShiftByteString :: StdGen -> Benchmark
+benchShiftByteString gen =
+    createTwoTermBuiltinBench name [] (largerByteStrings21 seedA) integerInputs
+        where (integerInputs, _) = makeSizedIntegers gen [1, 1000..20000]
+              name = ShiftByteString
+
+benchRotateByteString :: StdGen -> Benchmark
+benchRotateByteString gen =
+    createTwoTermBuiltinBench name [] (largerByteStrings21 seedA) integerInputs
+        where (integerInputs, _) = makeSizedIntegers gen [1, 1000..20000]
+              name = RotateByteString
+
+benchPopCountByteString :: Benchmark
+benchPopCountByteString =
+    bgroup (show name) $ fmap mkBM onesByteStrings
+        where mkBM b = benchDefault (showMemoryUsage b) $ mkApp1 name [] b
+              name = PopCountByteString
+
+-- The worst case will probably be when the leftmost bit is being written
+-- Maybe not: we have constant-time access to the bytes
+benchTestBitByteString :: Benchmark
+benchTestBitByteString =
+    bgroup (show name) $ fmap mkBM zeroByteStrings
+        where mkBM b = benchDefault (showMemoryUsage b) $
+                       mkApp2 name [] b (topBit b)
+              topBit b = 8 * (integerLength b) - 1
+              name = TestBitByteString
+
+
+-- The worst case will probably be when the leftmost bit is being written
+-- Maybe not: we have constant-time access to the bytes
+benchWriteBitByteString :: Benchmark
+benchWriteBitByteString =
+    bgroup (show name) $ fmap mkBM zeroByteStrings
+        where mkBM b = benchDefault (showMemoryUsage b) $
+                       mkApp3 name [] b (topBit b) True
+              topBit b = 8 * (fromIntegral $ BS.length b) - 1 :: Integer
+              name = WriteBitByteString
+
+-- The worst case is when the input consists entirely of 0x00 bytes
+benchFindFirstSetByteString :: Benchmark
+benchFindFirstSetByteString =
+    bgroup (show name) $ fmap mkBM zeroByteStrings
+        where mkBM b = benchDefault (showMemoryUsage b) $ mkApp1 name [] b
+              name = FindFirstSetByteString
+
+
+makeBitwiseBenchmarks :: StdGen -> [Benchmark]
+makeBitwiseBenchmarks gen =
+    [ benchIntegerToByteString gen
+    , benchByteStringToInteger
+    , benchAndByteString
+    , benchComplementByteString
+    , benchShiftByteString gen
+    , benchRotateByteString gen
+    , benchPopCountByteString
+    , benchTestBitByteString
+    , benchWriteBitByteString
+    , benchFindFirstSetByteString
+    ]
+
+makeBenchmarks :: StdGen -> [Benchmark]
+makeBenchmarks gen = makeBasicByteStringBenchmarks gen <> makeBitwiseBenchmarks gen
+
+

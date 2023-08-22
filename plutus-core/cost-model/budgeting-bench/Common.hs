@@ -183,7 +183,7 @@ mkApp6 name tys (force -> !x) (force -> !y) (force -> !z) (force -> !t) (force -
    cause trouble elsewhere.
  -}
 
-{- | Given a builtin function f of type a -> _ together with a lists xs, create a
+{- | Given a builtin function f of type a -> _ together with a list xs, create a
    collection of benchmarks which run f on all elements of xs. -}
 createOneTermBuiltinBench
     :: (fun ~ DefaultFun, uni ~ DefaultUni, uni `HasTermLevel` a, ExMemoryUsage a, NFData a)
