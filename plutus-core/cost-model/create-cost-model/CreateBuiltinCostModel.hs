@@ -1014,7 +1014,7 @@ popCountByteString cpuModelR = do
 
 testBitByteString :: MonadR m => (SomeSEXP (Region m)) -> m (CostingFun ModelTwoArguments)
 testBitByteString cpuModelR = do
-  cpuModel <- ModelTwoArgumentsLinearInX <$> readModelLinearInX cpuModelR
+  cpuModel <- ModelTwoArgumentsLinearInX <$> readModelLinearInX cpuModelR -- In practice this is constant, but let's be conservative
   let memModel = ModelTwoArgumentsConstantCost 1  -- Bolean result
   pure $ CostingFun cpuModel memModel
 

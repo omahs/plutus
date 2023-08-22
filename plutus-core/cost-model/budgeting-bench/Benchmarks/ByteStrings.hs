@@ -3,6 +3,7 @@ module Benchmarks.ByteStrings (makeBenchmarks) where
 import Common
 import Generators
 
+import Bitwise qualified
 import PlutusCore
 
 import Criterion.Main
@@ -205,11 +206,12 @@ onesByteStrings :: [BS.ByteString]
 onesByteStrings = fmap (flip BS.replicate 0xFF) $ fmap (8*10*) [1..150]
 
 --This seems to flatten out suspiciously.  Failing for large numbers?
-benchIntegerToByteString :: StdGen -> Benchmark
-benchIntegerToByteString gen =
+-- Could do with more data points here.
+benchIntegerToByteString :: Benchmark
+benchIntegerToByteString =
     bgroup (show name) $ fmap mkBM inputs
         where mkBM b = benchDefault (showMemoryUsage b) $ mkApp1 name [] b
-              (inputs, _) = makeSizedIntegers gen [1, 3..101]
+              inputs = fmap Bitwise.byteStringToInteger $ smallerByteStrings150 seedA
               name = IntegerToByteString
 
 benchByteStringToInteger :: Benchmark
@@ -229,18 +231,22 @@ benchComplementByteString =
         where mkBM b = benchDefault (showMemoryUsage b) $ mkApp1 name [] b
               name = ComplementByteString
 
+-- Maybe we don't need to go so far out here.
 benchShiftByteString :: StdGen -> Benchmark
 benchShiftByteString gen =
     createTwoTermBuiltinBench name [] (largerByteStrings21 seedA) integerInputs
         where (integerInputs, _) = makeSizedIntegers gen [1, 1000..20000]
               name = ShiftByteString
 
+-- Exclude the all-zeros and all-ones cases.
+-- Maybe we don't need to go so far out here.
 benchRotateByteString :: StdGen -> Benchmark
 benchRotateByteString gen =
     createTwoTermBuiltinBench name [] (largerByteStrings21 seedA) integerInputs
         where (integerInputs, _) = makeSizedIntegers gen [1, 1000..20000]
               name = RotateByteString
 
+-- Big step discontinuity in first figures
 benchPopCountByteString :: Benchmark
 benchPopCountByteString =
     bgroup (show name) $ fmap mkBM onesByteStrings
@@ -278,7 +284,7 @@ benchFindFirstSetByteString =
 
 makeBitwiseBenchmarks :: StdGen -> [Benchmark]
 makeBitwiseBenchmarks gen =
-    [ benchIntegerToByteString gen
+    [ benchIntegerToByteString
     , benchByteStringToInteger
     , benchAndByteString
     , benchComplementByteString

@@ -652,18 +652,18 @@ modelFun <- function(path) {
     bls12_381_finalVerifyModel       <- constantModel ("Bls12_381_finalVerify")
 
     ##### Bitwise operations #####
-    integerToByteStringModel    <- linearInX     ("IntegerToByteString")
-    byteStringToIntegerModel    <- linearInX     ("ByteStringToInteger")
-    andByteStringModel          <- linearInX     ("AndByteString")
+    integerToByteStringModel    <- linearInX ("IntegerToByteString")
+    byteStringToIntegerModel    <- linearInX ("ByteStringToInteger")
+    andByteStringModel          <- linearInX ("AndByteString")
     iorByteStringModel          <- andByteStringModel
     xorByteStringModel          <- andByteStringModel
-    complementByteStringModel   <- linearInX     ("ComplementByteString")
-    shiftByteStringModel        <- linearInX     ("ShiftByteString")
-    rotateByteStringModel       <- linearInX     ("RotateByteString")
-    popCountByteStringModel     <- linearInX     ("PopCountByteString")
-    testBitByteStringModel      <- constantModel ("TestBitByteString")
-    writeBitByteStringModel     <- linearInX     ("WriteBitByteString")
-    findFirstSetByteStringModel <- linearInX     ("FindFirstSetByteString")
+    complementByteStringModel   <- linearInX ("ComplementByteString")
+    shiftByteStringModel        <- linearInX ("ShiftByteString")
+    rotateByteStringModel       <- linearInX ("RotateByteString")
+    popCountByteStringModel     <- linearInX ("PopCountByteString")
+    testBitByteStringModel      <- linearInX ("TestBitByteString")
+    writeBitByteStringModel     <- linearInX ("WriteBitByteString")
+    findFirstSetByteStringModel <- linearInX ("FindFirstSetByteString")
 
     list(
         addIntegerModel                      = addIntegerModel,
