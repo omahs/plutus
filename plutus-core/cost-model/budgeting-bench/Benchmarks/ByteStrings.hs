@@ -1,3 +1,4 @@
+-- editorconfig-checker-disable-file
 module Benchmarks.ByteStrings (makeBenchmarks) where
 
 import Common
@@ -207,11 +208,12 @@ onesByteStrings = fmap (flip BS.replicate 0xFF) $ fmap (8*10*) [1..150]
 
 --This seems to flatten out suspiciously.  Failing for large numbers?
 -- Could do with more data points here.
-benchIntegerToByteString :: Benchmark
-benchIntegerToByteString =
+benchIntegerToByteString :: StdGen -> Benchmark
+benchIntegerToByteString gen =
     bgroup (show name) $ fmap mkBM inputs
         where mkBM b = benchDefault (showMemoryUsage b) $ mkApp1 name [] b
-              inputs = fmap Bitwise.byteStringToInteger $ smallerByteStrings150 seedA
+              inputs = fmap abs $ fst $ makeSizedIntegers gen [380..420]
+              -- ^ This also makes sure that everything's positive
               name = IntegerToByteString
 
 benchByteStringToInteger :: Benchmark
@@ -284,17 +286,20 @@ benchFindFirstSetByteString =
 
 makeBitwiseBenchmarks :: StdGen -> [Benchmark]
 makeBitwiseBenchmarks gen =
-    [ benchIntegerToByteString
-    , benchByteStringToInteger
-    , benchAndByteString
-    , benchComplementByteString
-    , benchShiftByteString gen
-    , benchRotateByteString gen
-    , benchPopCountByteString
-    , benchTestBitByteString
-    , benchWriteBitByteString
-    , benchFindFirstSetByteString
+    [ benchIntegerToByteString gen -- Mystery speedup after size 405 (length 3240 bytes)
+    , benchByteStringToInteger     -- Linear with small discontinuities, but good fit
+    , benchAndByteString           -- Good linear fit (X=Y)
+    , benchComplementByteString    -- Good linear fit
+    , benchShiftByteString gen     -- Good linear fit to X, flattens out a bit after X = 800
+    , benchRotateByteString gen    -- Good linear fit to X, appears to be independent of Y: avoid all-zeros/all-ones case
+    , benchPopCountByteString      -- Mystery jump after size 990 (just after 7870 bytes)
+    , benchTestBitByteString       -- Pretty much constant
+    , benchWriteBitByteString      -- Pretty good linear fit, use second set of figures
+    , benchFindFirstSetByteString  -- Good linear fit
     ]
+-- For IntegerToByteString we can just benchmark small inputs and conservatively overestimate larger ones.
+-- For PopCountByteString ...?
+
 
 makeBenchmarks :: StdGen -> [Benchmark]
 makeBenchmarks gen = makeBasicByteStringBenchmarks gen <> makeBitwiseBenchmarks gen

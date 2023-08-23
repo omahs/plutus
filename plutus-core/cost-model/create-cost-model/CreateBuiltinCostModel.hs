@@ -971,20 +971,20 @@ byteStringToInteger cpuModelR = do
 
 andByteString :: MonadR m => (SomeSEXP (Region m)) -> m (CostingFun ModelTwoArguments)
 andByteString cpuModelR = do
-  cpuModel <-  ModelTwoArgumentsMaxSize <$> readModelMaxSize cpuModelR
+  -- Recall that we require the arguments to have the same length, failing otherwise
+  cpuModel <-  ModelTwoArgumentsLinearInX <$> readModelLinearInX cpuModelR
   let memModel = ModelTwoArgumentsMaxSize $ ModelMaxSize 0 1
-  -- In fact we require the arguments to have the same length, failing otherwise
   pure $ CostingFun cpuModel memModel
 
 iorByteString :: MonadR m => (SomeSEXP (Region m)) -> m (CostingFun ModelTwoArguments)
 iorByteString cpuModelR = do
-  cpuModel <-  ModelTwoArgumentsMaxSize <$> readModelMaxSize cpuModelR
+  cpuModel <-  ModelTwoArgumentsLinearInX <$> readModelLinearInX cpuModelR
   let memModel = ModelTwoArgumentsMaxSize $ ModelMaxSize 0 1
   pure $ CostingFun cpuModel memModel
 
 xorByteString :: MonadR m => (SomeSEXP (Region m)) -> m (CostingFun ModelTwoArguments)
 xorByteString cpuModelR = do
-  cpuModel <-  ModelTwoArgumentsMaxSize <$> readModelMaxSize cpuModelR
+  cpuModel <-  ModelTwoArgumentsLinearInX <$> readModelLinearInX cpuModelR
   let memModel = ModelTwoArgumentsMaxSize $ ModelMaxSize 0 1
   pure $ CostingFun cpuModel memModel
 

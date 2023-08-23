@@ -129,7 +129,19 @@ arity <- function(name) {
         "Bls12_381_mulMlResult" = 2,
         "Bls12_381_finalVerify" = 2,
         "Keccak_256" = 1,
-        "Blake2b_224" = 1
+        "Blake2b_224" = 1,
+        "IntegerToByteString" = 1,
+        "ByteStringToInteger" = 1,
+        "AndByteString" = 2,
+        "IorByteString" = 2,
+        "XorByteString" = 2,
+        "ComplementByteString" = 1,
+        "ShiftByteString" = 2,
+        "RotateByteString" = 2,
+        "PopCountByteString" = 1,
+        "TestBitByteString" = 2,
+        "WriteBitByteString" = 3,
+        "FindFirstSetByteString" = 1
         )
 }
 
