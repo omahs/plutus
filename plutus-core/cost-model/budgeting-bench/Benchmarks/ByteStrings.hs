@@ -240,7 +240,7 @@ benchShiftByteString gen =
         where (integerInputs, _) = makeSizedIntegers gen [1, 1000..20000]
               name = ShiftByteString
 
--- Exclude the all-zeros and all-ones cases.
+-- TODO: exclude the all-zeros and all-ones cases.
 -- Maybe we don't need to go so far out here.
 benchRotateByteString :: StdGen -> Benchmark
 benchRotateByteString gen =
