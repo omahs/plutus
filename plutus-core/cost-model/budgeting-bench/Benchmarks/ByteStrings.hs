@@ -208,17 +208,17 @@ onesByteStrings = fmap (flip BS.replicate 0xFF) $ fmap (8*10*) [1..150]
 
 --This seems to flatten out suspiciously.  Failing for large numbers?
 -- Could do with more data points here.
-benchIntegerToByteString :: StdGen -> Benchmark
-benchIntegerToByteString gen =
+benchIntegerToByteString :: Benchmark
+benchIntegerToByteString =
     bgroup (show name) $ fmap mkBM inputs
         where mkBM b = benchDefault (showMemoryUsage b) $ mkApp1 name [] b
-              inputs = fmap abs $ fst $ makeSizedIntegers gen [380..420]
+              inputs = fmap Bitwise.byteStringToInteger $ smallerByteStrings150 seedA
               -- ^ This also makes sure that everything's positive
               name = IntegerToByteString
 
 benchByteStringToInteger :: Benchmark
 benchByteStringToInteger =
-    bgroup (show name) $ fmap mkBM (smallerByteStrings150 seedA)
+    bgroup (show name) $ fmap mkBM $ smallerByteStrings150 seedA
         where mkBM b = benchDefault (showMemoryUsage b) $ mkApp1 name [] b
               name = ByteStringToInteger
 
@@ -240,7 +240,7 @@ benchShiftByteString gen =
         where (integerInputs, _) = makeSizedIntegers gen [1, 1000..20000]
               name = ShiftByteString
 
--- TODO: exclude the all-zeros and all-ones cases.
+-- TODO: Exclude the all-zeros and all-ones cases.
 -- Maybe we don't need to go so far out here.
 benchRotateByteString :: StdGen -> Benchmark
 benchRotateByteString gen =
@@ -286,7 +286,7 @@ benchFindFirstSetByteString =
 
 makeBitwiseBenchmarks :: StdGen -> [Benchmark]
 makeBitwiseBenchmarks gen =
-    [ benchIntegerToByteString gen -- Mystery speedup after size 405 (length 3240 bytes)
+    [ benchIntegerToByteString     -- Mystery speedup after size 405 (length 3240 bytes)
     , benchByteStringToInteger     -- Linear with small discontinuities, but good fit
     , benchAndByteString           -- Good linear fit (X=Y)
     , benchComplementByteString    -- Good linear fit
