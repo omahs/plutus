@@ -9,5 +9,11 @@
       [ [ (builtin addInteger) (con integer 1) ] (con integer 2) ]
     )
   )
-  [ [ (builtin addInteger) [ f (con integer 3) ] ] [ f (con integer 4) ] ]
+  [
+    [
+      (builtin addInteger)
+      [ [ (builtin addInteger) (con integer 1) ] (con integer 2) ]
+    ]
+    [ [ (builtin addInteger) (con integer 1) ] (con integer 2) ]
+  ]
 )

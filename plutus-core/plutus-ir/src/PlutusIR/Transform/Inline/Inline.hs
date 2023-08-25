@@ -36,9 +36,8 @@ import Algebra.Graph qualified as G
 import Control.Monad.State.Class (gets)
 import Data.Map qualified as Map
 import PlutusCore.Pretty qualified as PLC
-import PlutusCore.Pretty.Classic qualified as PLC
-import PlutusCore.Pretty.PrettyConst qualified
 import PlutusIR.Contexts (AppContext (..), fillAppContext, splitApplication)
+import PlutusIR.Transform.Inline.CallSiteInline (callSiteInline)
 import Witherable (Witherable (wither))
 
 {- Note [Inlining approach and 'Secrets of the GHC Inliner']
@@ -257,9 +256,23 @@ processTerm = handleTerm <=< traverseOf termSubtypes applyTypeSubstitution where
                                             -- extract out the rhs without renaming, we only rename
                                             -- when we know there's substitution
                                             rhs = inlineTermToTerm defAsInlineTerm
-                                        -- callSiteInline rhs varInfo processedArgs
+                                        maybeInlined <- callSiteInline rhs varInfo processedArgs
                                         pure $ trace
                                                 ("Just varInfo branch. VarInfo is " <> display varInfo <> "\n"
+                                                <> "processedHd is " <> display (void processedHd) <> "\n"
+                                                <> "hd is " <> display (void hd) <> "\n"
+                                                <> "processedArgs is " <> display processedArgs <> "\n"
+                                                <> "args is " <> display args <> "\n"
+                                                <> "returning callSiteInline rhs varInfo processedArgs " <> display (void maybeInlined) <> "\n"
+                                                <> "rhs (input to callSiteInline) is " <> display rhs <> "\n"
+                                                )
+                                                maybeInlined
+                                    -- The variable maybe a *recursive* let binding, in which case
+                                    -- it won't be in the map, and we don't process it.
+                                    -- ATM recursive bindings aren't inlined.
+                                    Nothing ->
+                                        pure $ trace
+                                                ("Hd and processedHd are var, when looking for it in varInfo, Nothing branch " <> "\n"
                                                 <> "processedHd is " <> display processedHd <> "\n"
                                                 <> "hd is " <> display hd <> "\n"
                                                 <> "processedArgs is " <> display processedArgs <> "\n"
@@ -267,10 +280,6 @@ processTerm = handleTerm <=< traverseOf termSubtypes applyTypeSubstitution where
                                                 <> "returning (fillAppContext processedHd processedArgs) " <> display (fillAppContext processedHd processedArgs) <> "\n"
                                                 )
                                                 (fillAppContext processedHd processedArgs)
-                                    -- The variable maybe a *recursive* let binding, in which case
-                                    -- it won't be in the map, and we don't process it.
-                                    -- ATM recursive bindings aren't inlined.
-                                    Nothing -> pure $ fillAppContext processedHd processedArgs
                         -- if the processed head is not a variable (because it's inlined), just
                         -- process the subterms
                         _ ->  forMOf termSubterms t processTerm

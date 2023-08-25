@@ -144,6 +144,6 @@ callSiteInline headRhs = go
             Just inlined -> do
               let -- Inline only if the size is no bigger than not inlining.
                   sizeIsOk = termSize inlined <= termSize tm
-              pure $ if False then inlined else tm
+              pure $ if sizeIsOk then inlined else tm
             Nothing -> pure tm -- return the term with the head and arguments already processed
         else pure tm -- return the term with the head and arguments already processed

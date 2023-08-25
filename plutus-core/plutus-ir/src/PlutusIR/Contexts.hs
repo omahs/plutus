@@ -6,7 +6,7 @@
 -- with the context as a reified datatype that can be inspected and modified.
 module PlutusIR.Contexts where
 
-import PlutusCore.Default.Universe (DefaultUni)
+import PlutusCore.Default (DefaultUni)
 import PlutusIR.Core.Type (Term (Apply, TyInst), Type)
 import Prettyprinter (Pretty (..), viaShow)
 

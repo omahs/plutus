@@ -44,7 +44,7 @@ tests = testGroup "plutus-ir" <$> sequence
     -- , serialization
     -- , errors
     -- , pure names
-    -- , transform
+    , transform
     -- , types
     -- , typeErrors
     -- , generators 1

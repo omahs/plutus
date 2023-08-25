@@ -8,6 +8,6 @@
       (vardecl funApp (fun (con integer) (con integer)))
       (lam x (con integer) [ [ (builtin addInteger) appNum ] x ])
     )
-    [ funApp appNum ]
+    [ [ (builtin addInteger) appNum ] appNum ]
   )
 )
