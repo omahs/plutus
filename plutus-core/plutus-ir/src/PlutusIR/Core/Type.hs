@@ -46,6 +46,7 @@ import PlutusCore.Name qualified as PLC
 import Universe
 
 import Data.Text qualified as T
+import Data.Text.Prettyprint.Doc (viaShow)
 import Data.Word
 import PlutusCore.Error (ApplyProgramError (MkApplyProgramError))
 
