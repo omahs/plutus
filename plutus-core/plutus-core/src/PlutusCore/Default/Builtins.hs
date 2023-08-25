@@ -20,7 +20,6 @@ import PlutusCore.Builtin
 import PlutusCore.Data
 import PlutusCore.Default.Universe
 import PlutusCore.Evaluation.Machine.BuiltinCostModel
-import PlutusCore.Evaluation.Machine.ExBudget (ExBudget (ExBudget))
 import PlutusCore.Evaluation.Machine.ExBudgetStream
 import PlutusCore.Evaluation.Machine.ExMemoryUsage
 import PlutusCore.Evaluation.Result
@@ -1497,7 +1496,9 @@ instance uni ~ DefaultUni => ToBuiltinMeaning uni DefaultFun where
             (runCostingFunOneArgument . paramBlake2b_224)
     -- Bitwise
     toBuiltinMeaning _ver IntegerToByteString =
-        makeBuiltinMeaning integerToByteStringPlc (\_ _ -> ExBudgetLast $ ExBudget 0 0)
+        makeBuiltinMeaning
+            integerToByteStringPlc
+            (runCostingFunOneArgument . paramIntegerToByteString)
         where
           integerToByteStringPlc :: SomeConstant uni Integer -> EvaluationResult BS.ByteString
           integerToByteStringPlc (SomeConstant (Some (ValueOf uni n))) = do
