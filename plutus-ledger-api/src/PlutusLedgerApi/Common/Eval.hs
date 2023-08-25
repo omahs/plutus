@@ -214,3 +214,6 @@ But this is really far too strict: we can check when deserializing, so it can be
 failure, like the other such checks that we have. For now we keep it as it is, but we may
 try to move it later.
 -}
+
+
+deriving anyclass instance NoThunks a => NoThunks (Identity a)
