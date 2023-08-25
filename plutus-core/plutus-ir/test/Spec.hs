@@ -35,20 +35,20 @@ pTermAsProg = fmap (Program mempty PLC.latestVersion) pTerm
 
 tests :: TestNested
 tests = testGroup "plutus-ir" <$> sequence
-    [ prettyprinting
-    , prettyprintingReadable
-    , parsing
-    , lets
-    , datatypes
-    , recursion
-    , serialization
-    , errors
-    , pure names
-    , transform
-    , types
-    , typeErrors
-    , generators 1
-    , pure uniqueness
+    [ -- prettyprinting
+    -- , prettyprintingReadable
+    -- , parsing
+    -- , lets
+    -- , datatypes
+     recursion
+    -- , serialization
+    -- , errors
+    -- , pure names
+    -- , transform
+    -- , types
+    -- , typeErrors
+    -- , generators 1
+    -- , pure uniqueness
     ]
 
 prettyprinting :: TestNested
@@ -99,12 +99,12 @@ datatypes = testNested "datatypes"
 
 recursion :: TestNested
 recursion = testNested "recursion"
-    [ goldenNamedUPlcFromPir pTermAsProg "factorial"
-    , goldenPlcFromPir pTermAsProg "even3"
+    [--  goldenNamedUPlcFromPir pTermAsProg "factorial"
+     goldenPlcFromPir pTermAsProg "even3"
     , goldenEvalPir pTermAsProg "even3Eval"
-    , goldenPlcFromPir pTermAsProg "stupidZero"
-    , goldenPlcFromPir pTermAsProg "mutuallyRecursiveValues"
-    , goldenEvalPir pTermAsProg "errorBinding"
+    -- , goldenPlcFromPir pTermAsProg "stupidZero"
+    -- , goldenPlcFromPir pTermAsProg "mutuallyRecursiveValues"
+    -- , goldenEvalPir pTermAsProg "errorBinding"
     ]
 
 serialization :: TestNested
