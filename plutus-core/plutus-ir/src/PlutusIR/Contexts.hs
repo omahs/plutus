@@ -1,11 +1,14 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase        #-}
 -- | Datatypes representing 'contexts with holes' in Plutus IR terms.
 --
 -- Useful for focussing on a sub-part of a term and then reconstructing the term, but
 -- with the context as a reified datatype that can be inspected and modified.
 module PlutusIR.Contexts where
 
-import PlutusIR.Core
+import PlutusCore.Default.Universe (DefaultUni)
+import PlutusIR.Core.Type (Term (Apply, TyInst), Type)
+import Prettyprinter (Pretty (..), viaShow)
 
 -- | A context for an iterated term/type application, with the hole at the head of the
 -- application.
@@ -13,6 +16,11 @@ data AppContext tyname name uni fun ann =
   TermAppContext (Term tyname name uni fun ann) ann (AppContext tyname name uni fun ann)
   | TypeAppContext (Type tyname uni ann) ann (AppContext tyname name uni fun ann)
   | AppContextEnd
+  deriving stock (Show)
+
+instance (Show tyname, Show name, Show fun, Show ann)
+  => Pretty (AppContext tyname name DefaultUni fun ann) where
+  pretty = viaShow
 
 {- | Takes a term and views it as a head plus an 'AppContext', e.g.
 

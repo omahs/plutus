@@ -1,9 +1,10 @@
-{-# LANGUAGE ConstraintKinds  #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GADTs            #-}
-{-# LANGUAGE LambdaCase       #-}
-{-# LANGUAGE TemplateHaskell  #-}
-{-# LANGUAGE TypeFamilies     #-}
+{-# LANGUAGE ConstraintKinds   #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs             #-}
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE TypeFamilies      #-}
 
 {- | Types and their functions, and general utility (including heuristics) for inlining. -}
 
@@ -29,6 +30,7 @@ import Control.Monad.State
 
 import Data.Map qualified as Map
 import Data.Semigroup.Generic (GenericSemigroupMonoid (..))
+import PlutusCore.Default (DefaultUni)
 import Prettyprinter (viaShow)
 
 -- General infra:
@@ -78,6 +80,7 @@ type InlineM tyname name uni fun ann =
 -- See Note [Inlining approach and 'Secrets of the GHC Inliner']
 newtype InlineTerm tyname name uni fun ann =
     Done (Dupable (Term tyname name uni fun ann)) --out expressions
+    deriving stock (Show)
 
 -- | Term substitution, 'Subst' in the paper.
 -- A map of unprocessed variable and its substitution range.
@@ -120,6 +123,11 @@ data VarInfo tyname name uni fun ann = MkVarInfo
     -- ^ its definition, which has been processed, as an `InlineTerm`. To preserve
     -- global uniqueness, we rename before substituting in.
     }
+    deriving stock (Show)
+
+instance (Show tyname, Show name, Show fun, Show ann)
+  => Pretty (VarInfo tyname name DefaultUni fun ann) where
+    pretty = viaShow
 -- | Is the next argument a term or a type?
 data Param tyname name =
     TermParam name | TypeParam tyname

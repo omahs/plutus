@@ -1,3 +1,4 @@
+-- editorconfig-checker-disable-file
 {-# LANGUAGE ConstraintKinds  #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs            #-}
@@ -35,7 +36,6 @@ import Algebra.Graph qualified as G
 import Control.Monad.State.Class (gets)
 import Data.Map qualified as Map
 import PlutusIR.Contexts (AppContext (..), fillAppContext, splitApplication)
-import PlutusIR.Transform.Inline.CallSiteInline (callSiteInline)
 import Witherable (Witherable (wither))
 
 {- Note [Inlining approach and 'Secrets of the GHC Inliner']
@@ -161,7 +161,7 @@ supply, and the performance cost does not currently seem relevant. So it's fine.
 -- See Note [Inlining and global uniqueness]
 inline
     :: forall tyname name uni fun ann m
-    . ExternalConstraints tyname name uni fun m
+    . (ExternalConstraints tyname name uni fun m, Pretty (VarInfo tyname name uni fun ann))
     => InlineHints name ann
     -> PLC.BuiltinVersion fun
     -> Term tyname name uni fun ann
@@ -192,7 +192,7 @@ This might mean reinventing GHC's OccAnal...
 
 -- | Run the inliner on a `Core.Type.Term`.
 processTerm
-    :: forall tyname name uni fun ann. InliningConstraints tyname name uni fun
+    :: forall tyname name uni fun ann. (InliningConstraints tyname name uni fun, Pretty (VarInfo tyname name uni fun ann))
     => Term tyname name uni fun ann -- ^ Term to be processed.
     -> InlineM tyname name uni fun ann (Term tyname name uni fun ann)
 processTerm = handleTerm <=< traverseOf termSubtypes applyTypeSubstitution where
@@ -244,7 +244,10 @@ processTerm = handleTerm <=< traverseOf termSubtypes applyTypeSubstitution where
                                             -- extract out the rhs without renaming, we only rename
                                             -- when we know there's substitution
                                             rhs = inlineTermToTerm defAsInlineTerm
-                                        callSiteInline rhs varInfo processedArgs
+                                        -- callSiteInline rhs varInfo processedArgs
+                                        pure $ trace
+                                                ("Just " <> display varInfo)
+                                                (fillAppContext processedHd processedArgs)
                                     -- The variable maybe a *recursive* let binding, in which case
                                     -- it won't be in the map, and we don't process it.
                                     -- ATM recursive bindings aren't inlined.
@@ -335,7 +338,7 @@ term, but with the head (the rhs of the variable) and the arguments already proc
 
 -- | Run the inliner on a single non-recursive let binding.
 processSingleBinding
-    :: forall tyname name uni fun ann. InliningConstraints tyname name uni fun
+    :: forall tyname name uni fun ann. (InliningConstraints tyname name uni fun, Pretty (VarInfo tyname name uni fun ann))
     => Term tyname name uni fun ann -- ^ The body of the let binding.
     -> Binding tyname name uni fun ann -- ^ The binding.
     -> InlineM tyname name uni fun ann (Maybe (Binding tyname name uni fun ann))
@@ -373,7 +376,7 @@ processSingleBinding body = \case
 --   * we have extended the substitution, and
 --   * we are removing the binding (hence we return Nothing).
 maybeAddSubst
-    :: forall tyname name uni fun ann. InliningConstraints tyname name uni fun
+    :: forall tyname name uni fun ann. (InliningConstraints tyname name uni fun, Pretty (VarInfo tyname name uni fun ann))
     => Term tyname name uni fun ann
     -> ann
     -> Strictness

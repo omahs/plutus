@@ -129,11 +129,11 @@ availablePasses =
                                                                                   preserveLogging <- view (ccOpts . coPreserveLogging)
                                                                                   pure $ EvaluateBuiltins.evaluateBuiltins preserveLogging ver costModel t
                                                                               )
-    , Pass "inline"               (onOption coDoSimplifierInline)             (\t -> do
-                                                                                  hints <- view (ccOpts . coInlineHints)
-                                                                                  ver <- view ccBuiltinVer
-                                                                                  Inline.inline hints ver t
-                                                                              )
+    -- , Pass "inline"               (onOption coDoSimplifierInline)             (\t -> do
+    --                                                                               hints <- view (ccOpts . coInlineHints)
+    --                                                                               ver <- view ccBuiltinVer
+    --                                                                               Inline.inline hints ver t
+    --                                                                           )
     , Pass "commuteFnWithConst" (onOption coDoSimplifiercommuteFnWithConst) (pure . CommuteFnWithConst.commuteFnWithConst)
     ]
 
