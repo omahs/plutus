@@ -21,7 +21,7 @@ integerLength = fromIntegral . BS.length
 -- Arguments for single-argument benchmarks: 150 entries.
 -- Note that the length is eight times the size.
 smallerByteStrings150 :: H.Seed -> [BS.ByteString]
-smallerByteStrings150 seed = makeSizedByteStrings seed $ fmap (10*) [1..150]
+smallerByteStrings150 seed = makeSizedByteStrings seed [10, 20..1500]
 
 -- Arguments for two-argument benchmarks: 21 entries.
 -- Note that the length is eight times the size.
@@ -200,12 +200,6 @@ Mem:  linear (worst case)
 -}
 
 
-zeroByteStrings :: [BS.ByteString]
-zeroByteStrings = fmap (flip BS.replicate 0) $ fmap (8*10*) [1..150]
-
-onesByteStrings :: [BS.ByteString]
-onesByteStrings = fmap (flip BS.replicate 0xFF) $ fmap (8*10*) [1..150]
-
 --This seems to flatten out suspiciously.  Failing for large numbers?
 -- Could do with more data points here.
 benchIntegerToByteString :: Benchmark
@@ -229,7 +223,7 @@ benchAndByteString =
 
 benchComplementByteString :: Benchmark
 benchComplementByteString =
-    bgroup (show name) $ fmap mkBM zeroByteStrings
+    bgroup (show name) $ fmap mkBM (smallerByteStrings150 seedA)
         where mkBM b = benchDefault (showMemoryUsage b) $ mkApp1 name [] b
               name = ComplementByteString
 
@@ -251,7 +245,7 @@ benchRotateByteString gen =
 -- Big step discontinuity in first figures
 benchPopCountByteString :: Benchmark
 benchPopCountByteString =
-    bgroup (show name) $ fmap mkBM onesByteStrings
+    bgroup (show name) $ fmap mkBM (smallerByteStrings150 seedA)
         where mkBM b = benchDefault (showMemoryUsage b) $ mkApp1 name [] b
               name = PopCountByteString
 
@@ -259,7 +253,7 @@ benchPopCountByteString =
 -- Maybe not: we have constant-time access to the bytes
 benchTestBitByteString :: Benchmark
 benchTestBitByteString =
-    bgroup (show name) $ fmap mkBM zeroByteStrings
+    bgroup (show name) $ fmap mkBM (smallerByteStrings150 seedA)
         where mkBM b = benchDefault (showMemoryUsage b) $
                        mkApp2 name [] b (topBit b)
               topBit b = 8 * (integerLength b) - 1
@@ -270,7 +264,7 @@ benchTestBitByteString =
 -- Maybe not: we have constant-time access to the bytes
 benchWriteBitByteString :: Benchmark
 benchWriteBitByteString =
-    bgroup (show name) $ fmap mkBM zeroByteStrings
+    bgroup (show name) $ fmap mkBM (smallerByteStrings150 seedA)
         where mkBM b = benchDefault (showMemoryUsage b) $
                        mkApp3 name [] b (topBit b) True
               topBit b = 8 * (fromIntegral $ BS.length b) - 1 :: Integer
@@ -282,6 +276,8 @@ benchFindFirstSetByteString =
     bgroup (show name) $ fmap mkBM zeroByteStrings
         where mkBM b = benchDefault (showMemoryUsage b) $ mkApp1 name [] b
               name = FindFirstSetByteString
+              zeroByteStrings = fmap (flip BS.replicate 0) $ fmap (8*) [10, 20..1500]
+
 
 
 makeBitwiseBenchmarks :: StdGen -> [Benchmark]
