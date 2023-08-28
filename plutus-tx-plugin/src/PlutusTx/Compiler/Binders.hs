@@ -40,6 +40,18 @@ withVarScoped v k = do
     var <- compileVarFresh annMayInline v
     local (\c -> c {ccScope=pushName ghcName var (ccScope c)}) (k var)
 
+-- | Like `withVarScoped`, but
+withVarTyScoped ::
+    CompilingDefault uni fun m ann =>
+    GHC.Var ->
+    PIRType uni ->
+    (PIR.VarDecl PIR.TyName PIR.Name uni Ann -> m a) ->
+    m a
+withVarTyScoped v t k = do
+    let ghcName = GHC.getName v
+    var <- compileVarWithTyFresh annMayInline v t
+    local (\c -> c {ccScope=pushName ghcName var (ccScope c)}) (k var)
+
 withVarsScoped ::
     CompilingDefault uni fun m ann =>
     [GHC.Var] ->

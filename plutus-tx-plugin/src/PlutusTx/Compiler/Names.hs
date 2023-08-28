@@ -10,6 +10,7 @@ module PlutusTx.Compiler.Names where
 import PlutusTx.Compiler.Kind
 import {-# SOURCE #-} PlutusTx.Compiler.Type
 import PlutusTx.Compiler.Types
+import PlutusTx.PIRTypes
 import PlutusTx.PLCTypes
 
 import GHC.Plugins qualified as GHC
@@ -57,6 +58,11 @@ compileVarFresh ann v = do
     t' <- compileTypeNorm $ GHC.varType v
     n' <- compileNameFresh $ GHC.getName v
     pure $ PLC.VarDecl ann n' t'
+
+compileVarWithTyFresh :: CompilingDefault uni fun m ann => Ann -> GHC.Var -> PIRType uni -> m (PLCVar uni)
+compileVarWithTyFresh ann v t = do
+    n' <- compileNameFresh $ GHC.getName v
+    pure $ PLC.VarDecl ann n' t
 
 lookupTyName :: Scope uni -> GHC.Name -> Maybe PLCTyVar
 lookupTyName (Scope _ tyns) n = Map.lookup n tyns
