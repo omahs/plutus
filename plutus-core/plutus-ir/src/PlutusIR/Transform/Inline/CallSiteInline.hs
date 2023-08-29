@@ -81,7 +81,7 @@ applyAndBetaReduce rhs args0 = do
                   tm -- drop the beta reduced term lambda
               go acc' args'
             -- if it is not safe to beta reduce, just return the processed application
-            else pure . Just $ fillAppContext acc appCtx
+            else pure Nothing -- . Just $ fillAppContext acc appCtx
         (TyAbs _ann n _kd tm, TypeAppContext arg _ args') -> do
           acc' <-
             termSubstTyNamesM -- substitute the type param with the arg
@@ -89,10 +89,10 @@ applyAndBetaReduce rhs args0 = do
               tm -- drop the beta reduced type lambda
           go acc' args'
         -- term/type argument mismatch, don't inline
-        (LamAbs{}, TypeAppContext{}) -> pure Nothing
-        (TyAbs{}, TermAppContext{}) -> pure Nothing
+        (LamAbs{}, _) -> pure Nothing
+        (TyAbs{}, _) -> pure Nothing
         -- no more lambda abstraction, just return the processed application
-        (_, appCtx) -> pure . Just $ fillAppContext acc appCtx
+        (_, _) -> pure . Just $ fillAppContext acc args
 
       -- Is it safe to turn `(\a -> body) arg` into `body [a := arg]`?
       -- The criteria is the same as the criteria for inlining `a` in
